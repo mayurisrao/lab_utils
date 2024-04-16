@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screen Capture and Save</title>
+<style>
+    #captureButton {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+    <button id="captureButton">Save As</button>
+    <h1>Save</h1>
+    
+    <script>
+        document.getElementById('captureButton').addEventListener('click', function() {
+            // Capture the entire screen
+            html2canvas(document.body).then(async function(canvas) {
+                // Convert canvas to blob
+                var blobData = await new Promise(resolve => canvas.toBlob(resolve));
+
+                // Prompt user to save the screenshot
+                const fileHandle = await window.showSaveFilePicker({
+                    types: [{
+                        description: 'PNG Files',
+                        accept: {'image/png': ['.png']},
+                    }],
+                });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blobData);
+                await writable.close();
+            });
+        });
+    </script>
+
+    <!-- Include html2canvas library -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</body>
+</html>
