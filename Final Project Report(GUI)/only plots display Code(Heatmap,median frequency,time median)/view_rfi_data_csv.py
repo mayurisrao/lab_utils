@@ -111,6 +111,6 @@ plt.xticks(np.linspace(0, len(rfi_data) - 1, num_labels, dtype=int), [time_label
 
 plt.legend(loc='upper right')
 plt.savefig(input_name + '_time_med.png')
-plt.show()
+plt.show() 
 
 
