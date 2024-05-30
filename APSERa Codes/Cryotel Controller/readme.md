@@ -1,0 +1,12 @@
+## APSERa Monitor
+
+APSERa monitor helps the user to conveniently operate the Cryotel-MT cooler via the AVC controller. It is coded in python, and the user needs the following libraries (if not there) - Tkinter, serial, datetime. 
+                                                                                                                                                                       
+For runing, download the Cryotel_controller_GUI.py and open terminal in its download directory and run it using: 
+``` python Cryotel_controller_GUI.py  ```  
+
+The application is being constantly changed. So keep checking this space.
+
+| Version | Date pushed | Description of changes |
+| ------------- | ------------- | ------------- |
+| 1.0  | 30/05/2024  | First version |
