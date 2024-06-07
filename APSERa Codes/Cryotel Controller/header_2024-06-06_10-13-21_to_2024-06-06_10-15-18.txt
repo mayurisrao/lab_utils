@@ -1,0 +1,6 @@
+Date and Time: 2024-06-06 10:13:21 IST
+Duration: 0:01:57
+Temperature at Exit: 292.54
+Target Temperature at Exit: 280.00
+PID Values (Kp, Ki, Kd):   Kp: 005.00000       Ki: 000.50000       Kd: 000.20000
+Sensor: PT-100
