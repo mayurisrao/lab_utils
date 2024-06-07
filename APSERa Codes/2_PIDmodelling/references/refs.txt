@@ -1,3 +1,0 @@
-[1] Bhatt, Jiten H., Shail J. Dave, Manish M. Mehta, and Nitin Upadhyay. "Derivation of transfer function model based on miniaturized cryocooler behavior." INROADS-An International Journal of Jaipur National University 5, no. 1s (2016): 336-340.
-
-[2] Fuller, Sawyer, Ben Greiner, Jason Moore, Richard Murray, René van Paassen, and Rory Yorke. "The python control systems library (python-control)." In 2021 60th IEEE Conference on Decision and Control (CDC), pp. 4875-4881. IEEE, 2021.
