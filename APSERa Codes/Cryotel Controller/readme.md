@@ -12,5 +12,3 @@ The application is being constantly changed. So keep checking this space.
 | 1.0  | 30/05/2024  | First version ||
 | 1.1  | 6/6/2024    | Added Kp, Ki, Kd control, added refresh buttons, system parameters update every 5 secs|
 | 1.2  | 7/6/2024    | added Update button for auto off, changed visuals, some internal logic, added port and Baudrate input option for user at launch|
-
-[Click to see a snapshot of the GUI](https://drive.google.com/file/d/14wq_YiJAlVFyHBZ66mr9HYUCS9MosfDL/view?usp=drive_link)
