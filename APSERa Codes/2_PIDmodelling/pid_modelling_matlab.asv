@@ -1,0 +1,26 @@
+s = tf('s');
+w_n = 0.011591570876333793;
+damp_f = 0.23278909338730347;
+kp = 5;
+ki = 0.5;
+kd = 0.2;
+
+P = (w_n ^ 2)/((((s^2)*kd) + (s*kp) + ki)*(s+ (2*w_n*damp_f)));
+
+%figure
+%step(P)
+%hold on
+
+kp = 5;
+ki = 0.5;
+kd = 0.2;
+C = pid(kp,ki);
+T = feedback(C*P,1);
+
+t = 0:0.01:4000;
+step(T,t)
+
+%hold off
+%legend('Without Kp','With Kp')
+
+pidTuner(P,C)
