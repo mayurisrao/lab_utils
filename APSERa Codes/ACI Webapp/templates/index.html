@@ -274,6 +274,12 @@
         <div id="outVoltagePlot" style="width: 100%; height: 400px;"></div>
         <div id="outCurrentPlot" style="width: 100%; height: 400px;"></div>
     </div>
+
+    <div class="plots-container">
+        <div id="accXPlot" class="plot-container"></div>
+        <div id="accYPlot" class="plot-container"></div>
+        <div id="accZPlot" class="plot-container"></div>
+    </div>
     
     
     <div class="info-container_lakeshore lakeshore_css">
@@ -346,9 +352,21 @@
 
         let outVoltageData = [];
         let outCurrentData = [];
+        let accXData = [];
+        let accYData = [];
+        let accZData = [];
         let timeData = [];
+
+        let accXValues = [];
+        let accYValues = [];
+        let accZValues = [];
+        let timeSeries = [];
         
         let timeCounter = 0; // Initialize a counter for time tracking
+
+
+        // To track the current time in seconds
+        let currentTime = 0;
 
         function formatTime(seconds) {
             const date = new Date(0);
@@ -644,12 +662,7 @@
 
         // Call this function to initialize the dummy plot
         function plotDummy() {
-            const trace = {
-                x: Array.from({ length: 60 }, (_, i) => i + 1),
-                y: Array.from({ length: 60 }, () => Math.random() * 100), // Dummy data
-                mode: 'lines',
-                name: 'Dummy Data',
-            };
+            
 
             const layout = {
                 title: 'Dummy Plot',
@@ -711,6 +724,8 @@
             Plotly.newPlot('outCurrentPlot', [trace], layout);
         }
 
+       
+
         function setVoltage() {
             const voltage = prompt("Enter the voltage value:");
             if (voltage !== null) {
@@ -757,35 +772,154 @@
             }
         }
 
-        async function fetchData_iia() {
-            const response = await fetch('/get_data_iia');
-            const data = await response.json();
-            document.getElementById('temperature').innerText = data.temperature[data.temperature.length - 1] + ' °C';
-            document.getElementById('humidity').innerText = data.humidity[data.humidity.length - 1] + ' %';
-            document.getElementById('accx').innerText = data.accx[data.accx.length - 1];
-            document.getElementById('accy').innerText = data.accy[data.accy.length - 1];
-            document.getElementById('accz').innerText = data.accz[data.accz.length - 1];
+        function initPlots() {            
+
+            const layout = {
+                title: '',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: true,
+                    ticks: 'outside'
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accXPlot', [], layout);
+            Plotly.newPlot('accYPlot', [], layout);
+            Plotly.newPlot('accZPlot', [], layout);
         }
-        
-        
 
+        // Function to fetch real acceleration data from an API or sensor
+        async function fetchAccelerationData() {
+            try {
+                const response = await fetch('/get_data_iia'); // Your actual API endpoint here
+                const data = await response.json();
 
-        setInterval(fetchData_iia, 1000);
+                // Fetch the latest acceleration values for each axis
+                const accX = data.accx[data.accx.length - 1];
+                const accY = data.accy[data.accy.length - 1];
+                const accZ = data.accz[data.accz.length - 1];
+
+                // Increment the time by 1 second
+                timeCounter++;
+
+                // Add the new data points to the arrays
+                timeSeries.push(timeCounter);
+                accXValues.push(accX);
+                accYValues.push(accY);
+                accZValues.push(accZ);
+
+                // Limit data to the last 60 seconds
+                if (timeSeries.length > 60) {
+                    timeSeries.shift();
+                    accXValues.shift();
+                    accYValues.shift();
+                    accZValues.shift();
+                }
+
+                // Update the plots
+                plotAccX();
+                plotAccY();
+                plotAccZ();
+
+            } catch (error) {
+                console.error('Error fetching acceleration data:', error);
+            }
+        }
+
+        function plotAccX() {
+            const trace = {
+                x: timeSeries,
+                y: accXValues,
+                mode: 'lines',
+                name: 'Acceleration X',
+            };
+
+            const layout = {
+                title: 'Acceleration X (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accXPlot', [trace], layout);
+        }
+
+        function plotAccY() {
+            const trace = {
+                x: timeSeries,
+                y: accYValues,
+                mode: 'lines',
+                name: 'Acceleration Y',
+            };
+
+            const layout = {
+                title: 'Acceleration Y (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accYPlot', [trace], layout);
+        }
+
+        function plotAccZ() {
+            const trace = {
+                x: timeSeries,
+                y: accZValues,
+                mode: 'lines',
+                name: 'Acceleration Z',
+            };
+
+            const layout = {
+                title: 'Acceleration Z (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accZPlot', [trace], layout);
+        }
+
+        // Initialize plots on page load
+        initPlots();
 
         // Update the voltage and current values every second
-        setInterval(updateVoltageCurrent, 1000);
-        
+        setInterval(updateVoltageCurrent, 2000);
         // Other intervals remain the same
         setInterval(updateTemperatures, 2000); // Update every 2 seconds
         setInterval(updateLakeshoreTemperatures, 1000); // Update every 1 second
         initPlot();
         setInterval(fetchCurrentTemperature, 8000); // Update temperature every 8 seconds
-
-
+        plotAccX();
+        plotAccY();
+        plotAccZ();
         // Initial plot setup
-        plotDummy();
         // Update every second
-        setInterval(updateVoltageCurrent, 1000);
+        setInterval(updateVoltageCurrent, 2000);
+        setInterval(fetchAccelerationData, 1000); // Fetch data every 1000ms (1 second)
+
     
     </script>
 </body>
