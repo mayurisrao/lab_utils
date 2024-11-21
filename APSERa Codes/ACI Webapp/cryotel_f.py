@@ -511,7 +511,7 @@ ser_lakeshore = setup_serial_lakeshore()
 
 
 try:
-    ser_power = serial.Serial(port='/dev/ttyUSB6', baudrate=9600, timeout=read_timeout_power)
+    ser_power = serial.Serial(port='/dev/ttyUSB5', baudrate=9600, timeout=read_timeout_power)
     remote_on_power()
 except Exception as e:
     print(f"Error opening serial port: {e}")
@@ -522,4 +522,4 @@ except Exception as e:
 initialize_serial_connection()
 
 
-app.run(debug=False, host='172.16.101.78', port=5002)
+app.run(debug=False, host='172.16.101.78', port=5001)
