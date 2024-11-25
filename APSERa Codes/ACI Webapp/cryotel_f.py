@@ -8,7 +8,62 @@ import os
 import time
 import json
 
+import tkinter as tk
+from tkinter import simpledialog
+
+def get_usb_paths():
+    # Create the main Tkinter window
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
+
+    # Create a custom dialog for multiple inputs
+    def submit():
+        global cryo_usb, lakeshore_usb, power_usb, iia_usb
+        cryo_usb = cryo_entry.get()
+        lakeshore_usb = lakeshore_entry.get()
+        power_usb = power_entry.get()
+        iia_usb = iia_entry.get()
+        dialog.destroy()  # Close the dialog box
+
+    dialog = tk.Toplevel()
+    dialog.title("Enter USB Paths")
+
+    # Labels and entry fields
+    tk.Label(dialog, text="Cryo USB:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+    cryo_entry = tk.Entry(dialog, width=30)
+    cryo_entry.insert(0, "/dev/ttyUSB1")
+    cryo_entry.grid(row=0, column=1, padx=10, pady=5)
+
+    tk.Label(dialog, text="Lakeshore USB:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+    lakeshore_entry = tk.Entry(dialog, width=30)
+    lakeshore_entry.insert(0, "/dev/ttyUSB2")
+    lakeshore_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(dialog, text="Power USB:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+    power_entry = tk.Entry(dialog, width=30)
+    power_entry.insert(0, "/dev/ttyUSB5")
+    power_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    tk.Label(dialog, text="IIA USB:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
+    iia_entry = tk.Entry(dialog, width=30)
+    iia_entry.insert(0, "/dev/ttyUSB3")
+    iia_entry.grid(row=3, column=1, padx=10, pady=5)
+
+    # Submit button
+    tk.Button(dialog, text="Submit", command=submit).grid(row=4, column=0, columnspan=2, pady=10)
+
+    dialog.wait_window()  # Wait until the dialog box is closed
+
+    return cryo_usb, lakeshore_usb, power_usb, iia_usb
+
+# Get user inputs
+cryo_usb, lakeshore_usb, power_usb, iia_usb = get_usb_paths()
+
+
+
 app = Flask(__name__)
+
+
 
 #===========================================================================================
 
@@ -22,7 +77,7 @@ logging_end_time = None  # Variable to store the end time for logging
 # Functions for serial connection of cryo controller
 def initialize_serial_connection():
     global ser_connection_fail, ser
-    port = "/dev/ttyUSB1"  # or "COM3" for Windows
+    port = cryo_usb  # or "COM3" for Windows
     baudrate = 9600
     
     try:
@@ -254,7 +309,7 @@ def initialize_serial_lakeshore(port, baudrate):
 # Setup serial connection
 def setup_serial_lakeshore():
     global ser_lakeshore
-    port = "/dev/ttyUSB2"  # Replace this with actual port input
+    port = lakeshore_usb  # Replace this with actual port input
     baudrate = 9600  # Replace this with actual baudrate input
     ser_lakeshore = initialize_serial_lakeshore(port, baudrate)
     return ser_lakeshore
@@ -336,17 +391,6 @@ ser_power = None
 terminator_power = '\r\n'
 read_timeout_power = 2
 
-# Power Supply Functions
-def initialize_serial_power():
-    try:
-        serial_power = serial.Serial(port='/dev/ttyUSB6', baudrate=9600, timeout=read_timeout_power)
-        status = remote_on_power()
-        
-        return serial_power
-    
-    except Exception as e:
-        print(f"Failed to initialize serial port: {e}")
-        return None
 
 def read_response_power(serial_port, timeout_period, terminator_power):
     start_time = time.time()
@@ -501,7 +545,7 @@ def get_data_iia():
 
 # Initialize the serial connection
 try:
-    ser_iia = serial.Serial('/dev/ttyUSB3', 9600, timeout=1)
+    ser_iia = serial.Serial(iia_usb, 9600, timeout=1)
 except Exception as e:
     print(f"Error opening serial port: {e}")
     exit()
@@ -511,7 +555,7 @@ ser_lakeshore = setup_serial_lakeshore()
 
 
 try:
-    ser_power = serial.Serial(port='/dev/ttyUSB6', baudrate=9600, timeout=read_timeout_power)
+    ser_power = serial.Serial(port=power_usb, baudrate=9600, timeout=read_timeout_power)
     remote_on_power()
 except Exception as e:
     print(f"Error opening serial port: {e}")
@@ -522,4 +566,4 @@ except Exception as e:
 initialize_serial_connection()
 
 
-app.run(debug=False, host='172.16.101.78', port=5002)
+app.run(debug=False, host='172.16.101.78', port=5001)
