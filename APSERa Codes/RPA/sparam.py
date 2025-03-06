@@ -32,11 +32,6 @@ def dict_db_to_linear(_df):
     - For each parameter other than `freq`, the function applies a 10^(dB_value / 20) transformation 
       to convert from dB to linear scale.
 
-    Example:
-    --------
-    >>> db_dict = {'freq': [1, 2, 3], 'gain': [-20, 0, 20]}
-    >>> dict_db_to_linear(db_dict)
-    {'freq': [1, 2, 3], 'gain': [0.1, 1.0, 10.0]}
     
     """
     linear_df = {}  # Create a new dictionary
@@ -324,7 +319,7 @@ def trim_smatrix(freq_, smatrix_, lim):
 
 
 
-def interpolate_smatrix_datasheet(ds, meta, db_true, db_negate, req_length, port, lim):
+def load_smatrix_fromdatasheet(ds, meta, db_true, db_negate, req_length, port, lim):
     """
     Interpolates S-parameter data from a datasheet to a specified frequency length.
 
@@ -376,7 +371,7 @@ def interpolate_smatrix_datasheet(ds, meta, db_true, db_negate, req_length, port
     - The S11, S22, S33, S44 is expected to be inputed as VSWR.
     - Frequency unit is assumed as MHz
     """
-    
+    print('make sure the input s params data is in dB!')
     if str(type(ds)) == "<class 'str'>":
         if port == 4:    
             print('s params input variable is string, reading...\n')
@@ -439,7 +434,7 @@ def interpolate_smatrix_datasheet(ds, meta, db_true, db_negate, req_length, port
                           ,[s41_],[s42_],[s43_],[s44_] ]
 
         if port == 2:
-            print('s params input variable is string, reading...\n')
+            
             sarray = []
     
             freq_ds = []
@@ -481,13 +476,13 @@ def interpolate_smatrix_datasheet(ds, meta, db_true, db_negate, req_length, port
                            [s21_],[s22_] ]
 
             
-        print("frequency translated... Length: " + str(len(freq_ds)))   
-        print('s params translated... Length: ' + str(len(sarray)))  
+        print("datasheet frequency length: " + str(len(freq_ds)))   
+        print('datasheet sparams length: ' + str(len(sarray)))  
 
         # db to linear convertion
         
         if db_true:
-            print('make sure the input s params data is in dB!')
+            
             
             sarray_db = []            
             for i in sarray:
@@ -514,7 +509,7 @@ def interpolate_smatrix_datasheet(ds, meta, db_true, db_negate, req_length, port
 
         # interpolater
         
-        print('Interpolation success :)')
+        print('Interpolation success...')
         print("========================================================\n") 
 
         
@@ -922,9 +917,7 @@ def read_s2p(file_path):
     
     return np.array(frequencies), np.array(s_matrix)
 
-
-
-def interpolate_s_matrix_general(s_matrix, current_freq, new_freq):
+def shape_smatrix_general(s_matrix, current_freq, new_freq):
     """
     Interpolates an S-matrix from current frequency points to new frequency points.
     
@@ -1032,7 +1025,7 @@ def general_line_interpolate(x, xp, yp):
 def interpolate_smatrices(devices, current_f_list, new_f):
     temp_devices = []
     for i in range(len(devices)):
-        temp_devices.append(interpolate_s_matrix_general(devices[i], current_f_list[i], new_f))
+        temp_devices.append(shape_smatrix_general(devices[i], current_f_list[i], new_f))
     print('All S matrices are compatible with each other and current freq')
     return temp_devices
     
