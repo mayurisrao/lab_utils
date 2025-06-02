@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APSERa Control Interface</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: row; 
+            justify-content: space-between; 
+            margin-top: 30px;
+        }
+        .left-pane {
+            flex: 1; 
+            margin-right: 20px; 
+        }
+        .right-pane {
+            width:400px; 
+        }
+        
+        .info {
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px; 
+            
+        }
+
+        .info_kpid {
+            font-size: 1.5em;
+            display: flex;
+            align-items: left;
+            margin-bottom: 10px; 
+            display: flex;
+            flex-direction: column;
+            gap: 5px; 
+            
+        }
+        .box {
+            display: inline-block;
+            padding: 10px;
+            border: 2px solid #ffffff;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            margin-left: 10px;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .box_leftpane_topborders {
+            display: inline-block;
+            padding: 10px;
+            border: 2px solid #ffffff;
+            border-radius: 5px;
+            background-color: #383838;
+            margin-left: 10px;
+            font-weight: bold;
+            text-align: left;
+            width: 75%
+        }
+        .info-container {
+            border: 2px solid #ffffff; 
+            border-radius: 5px;
+            padding: 15px; 
+            margin-bottom: 20px; 
+        }
+        .info-container_lakeshore {
+            border: 2px solid #00ff73; 
+            text-align: center;
+            border-radius: 5px;
+            padding: 15px; 
+            margin-bottom: 20px; 
+        }
+        .set-info-container {
+            border: 2px solid #ffffff;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .set-container {
+            margin-top: 20px; 
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid #ffffff;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            margin-right: 10px; 
+            width: 100px; 
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            color: white; /* Default text color */
+            cursor: pointer;
+        }
+        .styled-button {
+            color: black; /* Text color */
+            background-color: white; /* Background color */
+        }
+        .styled-button_fullwidth {
+            color: black; /* Text color */
+            background-color: white; /* Background color */
+            width: 100%;
+        }
+        .styled-button:hover {
+            opacity: 0.8;
+        }
+        #startCoolerButton {
+            background-color: green;
+        }
+        #stopCoolerButton {
+            background-color: red;
+        }
+        #tempChart {
+            width: 400px; 
+            height: 400px; 
+        }
+	    .cooler-status {
+            border: 2px solid white; /* Border color */
+            border-radius: 5px;
+            padding: 15px; 
+            margin-top: 20px; 
+            color: white; /* Text color for 'COOLER' */
+        }
+        .cooler-status .status {
+            font-weight: bold;
+            color: red; /* Default 'OFF' color */
+        }
+        .lakeshore_css {
+            font-weight: bold;
+            color: rgb(0, 0, 0); 
+            background-color:  rgb(168, 168, 168);
+        }
+	    .sensor {
+            font-size: 24px;
+            padding: 10px;
+            width: 25%; /* Each sensor takes up half the container width */
+            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+        }
+        #sensors {
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap to the next line */
+        }
+        .temperature {
+            font-size: 24px;
+            color: red;
+        }
+        #voltage-current-container {
+            margin-top: 20px; /* Adjust the value as needed for desired spacing */
+        }
+        .response {
+            display: inline-block; /* Keep it inline with the label */
+            margin-left: 10px;    /* Adjust spacing as needed */
+        }
+        h2.power-supply-title {
+            color: #A9A9A9; /* A greyish color */
+        }
+        .full-width-box {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px; /* Optional padding */
+            font-size: 1.2em; /* Adjust font size as needed */
+        }
+
+        .plots-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px; /* Add some space above */
+        }
+
+        .plots-container > div {
+            flex: 1; /* Each plot takes equal space */
+            margin: 0 10px; /* Space between plots */
+        }
+        
+        #alertmodal{
+            display: none;
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -30%);
+            background-color: #383838;
+            border: 2px solid #837474;
+            padding: 0;
+            z-index: 1000;
+            resize: both;
+            overflow: auto;
+            width: 300px;
+        }
+
+        #alertHeader {
+            padding: 10px;
+            background-color: #555;
+            cursor: move;
+            color: white;
+            border-bottom: 1px solid #837474;
+        }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="info-container cooler-status">
+        <h1>APSERa Control Interface</h1>
+        <div class="container">
+            <div class="left-pane">
+                <div class="box_leftpane_topborders">
+                    <div class="info">
+                        Dewar Temp: <div id="current-temp" class="box">...</div>
+                    </div>
+                    <div class="info">
+                        Current Target Temp: <div id="target-temp" class="box">...</div>
+                        <button class="styled-button" onclick="fetchTargetTemperature()">Get Target Temp</button>
+                    </div>
+                    <div class="info">
+                        Current Kp, Ki, Kd: <div id="kp-ki-kd" class="box">...</div>
+                        <button class="styled-button" onclick="fetchKpKiKd()">Fetch Kp, Ki, Kd</button>
+                    </div>
+                </div>
+
+                <div class="set-container set-info-container box_leftpane_topborders">
+                    <div class="info">
+                        Set Target Temp: 
+                        <input type="text" id="set-target-temp" placeholder="Target Temp (K)">
+                    </div>
+                    <button class="styled-button_fullwidth" onclick="setTargetTemp()">Set Temp</button>
+                    <div class="info_kpid">
+                        Set Kp: <input type="text" id="set-kp" placeholder="Kp">
+                        Set Ki: <input type="text" id="set-ki" placeholder="Ki">
+                        Set Kd: <input type="text" id="set-kd" placeholder="Kd">
+                        <button class="styled-button" onclick="setKpKiKd()">Set PID</button>
+                    </div>
+                </div>
+                <div class="info-container cooler-status box_leftpane_topborders">
+                    <div class="info">
+                        COOLER: <span class="status" id="cooler-status">OFF</span>
+                    </div>
+                </div>
+            </div>
+            <div class="right-pane">
+                <div id="tempChart"></div>
+                <button id="startCoolerButton" class="styled-button" onclick="startCooler()">START COOLER</button>
+                <button id="stopCoolerButton" class="styled-button" onclick="stopCooler()" disabled>STOP COOLER</button>
+                <button id="logButton" class="styled-button" onclick="toggleLogging()">START LOGGING</button>            
+
+                                
+                <div class="box_leftpane_topborders" id="voltage-current-container">
+                    <h2 class="power-supply-title">Power Supply Control</h2>
+                    <div class="full-width-box">
+                        Set Voltage: 
+                        <div id="set-voltage" class="box response">---</div>
+                        <button class="styled-button" onclick="setVoltage()">Set Voltage</button>
+                    </div>
+                    <div class="full-width-box">
+                        Set Current: 
+                        <div id="set-current" class="box response">---</div>
+                        <button class="styled-button" onclick="setCurrent()">Set Current</button>
+                    </div>
+                    <div class="full-width-box">
+                        Output Voltage: <div id="out-voltage" class="box response">---</div>
+                    </div>
+                    <div class="full-width-box">
+                        Output Current: <div id="out-current" class="box response">---</div>
+                    </div>
+                </div>           
+            </div>            
+        </div>          
+    </div>
+    <div class="plots-container">
+        <div id="data-display">
+            <p>Temperature: <span id="temperature-text">---</span> °C</p>
+            <p>Humidity: <span id="humidity-text">---</span> %</p>
+            <p>Acceleration X: <span id="accx-text">---</span> m/s²</p>
+            <p>Acceleration Y: <span id="accy-text">---</span> m/s²</p>
+            <p>Acceleration Z: <span id="accz-text">---</span> m/s²</p>
+        </div>
+        <div id="outVoltagePlot" style="width: 100%; height: 400px;"></div>
+        <div id="outCurrentPlot" style="width: 100%; height: 400px;"></div>
+    </div>
+
+    <div class="plots-container">
+        <div id="accXPlot" class="plot-container"></div>
+        <div id="accYPlot" class="plot-container"></div>
+        <div id="accZPlot" class="plot-container"></div>
+    </div>
+    
+    
+    <div class="info-container_lakeshore lakeshore_css">
+        <h2>Lakeshore Monitor</h2>
+        <div id="sensors">
+            <div class="sensor" id="sensor1">Sensor 1: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor2">Sensor 2: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor3">Sensor 3: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor4">Sensor 4: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor5">Sensor 5: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor6">Sensor 6: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor7">Sensor 7: <span class="temperature">---</span></div>
+            <div class="sensor" id="sensor8">Sensor 8: <span class="temperature">---</span></div>
+        </div>
+    
+        <div id="lakeshore-plot" style="width: 100%; height: 400px;" text-align: center ></div>
+        <div id="customAlert" style="display:none;background:#eee; padding: 10px; border:1px solid #aaa;">
+           <span id="customAlertMessage"></span>
+           <br>
+           <button onclick="acknowledgeAlert()">OK</button>
+  
+        </div>
+
+        <div id="alertmodal"> 
+              <div id="alertHeader"><h3 id="alertTitle" style="color: white;">Temperature Alert!</h3></div>
+             <form id="alertForm">
+                 <label for="name"  style="color: white;">Name:</label><br>
+                 <select name="name" id="name" required>
+                 <option value="" disabled selected>Select your name</option>
+                 <option value="Mayuri">Mayuri</option>
+                 <option value="Keerthipriya">Keerthipriya</option>
+                 <option value="Narendra">Narendra</option>
+                 <option value="Kushal">Kushal</option>
+                 <option value="Others">Others</option>
+                 </select><br><br>
+                 <label  style="color: white;">Comment:</label><br>
+                 <input type="text" name="comment" required><br><br>
+                 <button type="submit"  style="color: white; background-color: transparent; border: 1px solid white; padding: 5px 10px;">Submit</button>
+             </form>                  
+
+        </div>
+        <script>
+            let lakeshoreTemperatures = [];
+            let lastAlertTimesen1 = lastAlertTimesen2 = lastAlertTimesen3 = 0;
+            function plotLakeshoreTemperatures() {
+                const sensorsCount = 8;
+                const traces = [];
+
+                for (let i = 0; i < sensorsCount; i++) {
+                    const yData = lakeshoreTemperatures.map(temp => temp[i]);
+                    traces.push({
+                        x: Array.from({length: lakeshoreTemperatures.length}, (_, idx) => idx + 1),
+                        y: yData,
+                        mode: 'lines',
+                        name: `Sensor ${i + 1}`, // Corrected this line with backticks for template literal
+                    });
+                }
+
+                const layout = {
+                    xaxis: { title: 'Time (in sec passed)' },
+                    yaxis: { title: 'Temperature (K)' },
+                    plot_bgcolor: '#121212',
+                    paper_bgcolor: '#121212',
+                    font: { color: '#ffffff' },
+                };
+
+                Plotly.newPlot('lakeshore-plot', traces, layout);
+            }
+
+
+            function updateLakeshoreTemperatures() {
+                fetch('/get_temperature_data_lakeshore')
+                    .then(response => response.json())
+                    .then(data => {
+                        lakeshoreTemperatures.push(data.temperatures);
+
+                        if (data.temperatures[0] > 297 &&  ((Date.now()) - lastAlertTimesen1 >= 1 * 75 * 1000)) {
+                        dispalert(data.temperatures[0],`Lakeshore's sensor 1 temp exceeded 297K: ${data.temperatures[0]}`,'sen1');
+                        }
+                        if (data.temperatures[1] > 297 &&  ((Date.now()) - lastAlertTimesen2 >= 1 * 105 * 1000)) {
+                        dispalert(data.temperatures[1],`Lakeshore's sensor 2 temp exceeded 297K: ${data.temperatures[1]}`,'sen2');
+                        }
+                        if (data.temperatures[2] > 297 &&  ((Date.now()) - lastAlertTimesen3 >= 1 * 120 * 1000)) {
+                        dispalert(data.temperatures[2],`Lakeshore's sensor 3 temp exceeded 297K: ${data.temperatures[2]}`,'sen3');
+                        }
+
+                        
+                        if (lakeshoreTemperatures.length > 120) {
+                            lakeshoreTemperatures.shift(); // Keep the last 60 readings
+                        }
+                        plotLakeshoreTemperatures();
+                    })
+                    .catch(error => console.error('Error fetching lakeshore temperatures:', error));
+            }  
+        </script>
+    </div>
+
+    <script>
+        let tempData = [];
+        let timeElapsed = [];
+        let logging = false; // Flag to check if logging is active
+        let isLogging = false;
+        let temperatureDump = []; // To store the temperature data
+        let logData = []; // To store log data for CSV
+        let powerdata = [];
+        let lastAlertTimetemp = lastAlertTimevolt = lastAlertTimeiia = lastAlertTimecurrent = lastAlertTimeiiatemp = lastAlertTimeiiahumid = lastAlertTimeethernet = 0;
+
+        
+
+        let outVoltageData = [];
+        let outCurrentData = [];
+        let accXData = [];
+        let accYData = [];
+        let accZData = [];
+        let timeData = [];
+
+        let accXValues = [];
+        let accYValues = [];
+        let accZValues = [];
+        let timeSeries = [];
+        
+        let timeCounter = 0; // Initialize a counter for time tracking
+
+        let triggeredTime ="";
+        let acknowledgeTime ="";
+        // To track the current time in seconds
+        let currentTime = 0;
+
+
+        let now = new Date();
+
+        function checkEthernetStatus() {
+        fetch('/ethernet-status')
+        .then(res => res.json())
+        .then(data => {
+            
+            if (!data.ethernet_connected &&  ((Date.now()) - lastAlertTimeethernet >= 2 * 75 * 1000)) {
+               dispalert(0,`Ethernet is diconnected`,'ethernet');
+            }
+        })
+        .catch(err => {
+            console.error("Failed to fetch ethernet status:", err);
+        });
+}
+
+        function formatTime(seconds) {
+            const date = new Date(0);
+            date.setSeconds(seconds);
+            return date.toISOString().substr(11, 8);
+        }
+
+        function showCustomAlert(message){
+             const istOffset = 5.5 * 60 * 60 * 1000;
+             triggeredTime=new Date(new Date().getTime() + istOffset).toISOString();
+             document.getElementbyId("customAlertMessage").textContent=message;
+             document.getElementbyid("customAlert").style.display="block";
+}
+   
+        function acknowledgeAlert(){
+             const istOffset = 5.5 * 60 * 60 * 1000;
+             acknowledgeTime=new Date(new Date().getTime() + istOffset).toISOString();
+             document.getElementById("customAlert").style.display="none";
+}
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const formatter = new Intl.DateTimeFormat('en-GB', options);
+            const parts = formatter.formatToParts(now);
+            const dateString = parts.map(part => part.value).join('').replace(',', '');
+            return dateString.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1');
+        }
+
+        function initPlot() {
+            const trace = {
+                x: timeElapsed,
+                y: tempData,
+                mode: 'lines+markers',
+                type: 'scatter',
+                name: 'Current Temperature (K)',
+                line: { color: 'rgba(255, 99, 132, 1)' },
+            };
+
+            const layout = {
+                title: 'Dewar Temp (K)',
+                xaxis: {
+                    showgrid: true,
+                    zeroline: false,
+                    tickangle: -45,
+                    tickmode: 'linear',
+                    tickvals: [],  // Hide x-axis ticks
+                    ticktext: []   // Hide x-axis tick labels
+                },
+                yaxis: {
+                    autorange: true,
+                },
+                margin: { t: 30, r: 30, l: 30, b: 30 },
+                height: 400,  // Increase height
+                width: 410,   // Increase width
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: {
+                    color: '#ffffff',
+                }
+            };
+
+            Plotly.newPlot('tempChart', [trace], layout);
+        }
+
+
+        function updatePlot(currentTemp) {
+            const now = new Date(); // Get the current time
+            const currentTime = now.toTimeString().split(' ')[0]; // Format to HH:MM:SS
+            timeElapsed.push(currentTime); // Use formatted time
+
+            tempData.push(currentTemp.toFixed(1));
+
+            // Limit data to the last 60 points (or 60 seconds)
+            if (timeElapsed.length > 60) {
+                timeElapsed.shift();
+                tempData.shift();
+            }
+
+            // Update the plot
+            Plotly.update('tempChart', {
+                x: [timeElapsed],
+                y: [tempData],
+            }, {
+                xaxis: { range: [timeElapsed[0], timeElapsed[timeElapsed.length - 1]] } // Adjust x-axis range
+            });
+        }
+
+
+        async function showAlertWithLogging(message){
+
+             const utcTime = new Date().toISOString();
+             const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC + 5:30 hours
+             const showntime = new Date(new Date().getTime() + istOffset).toISOString();
+             fetch('/log_alert',{
+                   method:'POST',
+                   headers: {'Content-Type':'application/json'},
+                   body: JSON.stringify({event:"ALERT TRIGGERED",message:message,timestamp:showntime})                
+             });
+             alert(message);
+
+             const acknowledgedtime=new Date().toISOString();
+             fetch('/log_alert',{
+                   method:'POST',
+                   headers: {'Content-Type':'application/json'},
+                   body: JSON.stringify({event:"ALERT ACKNOWLEDGED",message:message,timestamp:showntime})                
+             });
+}
+          
+
+
+        function fetchCurrentTemperature() {
+            return fetch('/get_temperature')
+                .then(response => response.json())
+                .then(data => {
+                    const currentTemp = parseFloat(data.current_temp);
+                    if (!isNaN(currentTemp) && currentTemp >= 60 && currentTemp <= 310) {
+                        document.getElementById('current-temp').innerText = currentTemp + ' K';
+                        updatePlot(currentTemp);
+                        
+                        // Save temperature to the temperature_dump
+                        temperatureDump.push(currentTemp);
+                        
+                        // If logging is active, save the datetime and temperature
+                        if (isLogging) {
+                            const now = new Date();
+                            logData.push([getCurrentTimestamp(), currentTemp]);
+                        }
+                    } else {
+                        document.getElementById('current-temp').innerText = '.';
+                    }
+                  //alert(((Date.now()) - lastAlertTime)/ 60*1000);
+                  if (currentTemp > 290 &&  ((Date.now()) - lastAlertTimetemp >= 1 * 60 * 1000)) {
+                        dispalert(currentTemp,`Temperature exceeded 290K: ${currentTemp}`,'temp');
+                     }
+                   
+                })
+                .catch(error => {
+                    console.error('Error fetching temperature:', error);
+                    document.getElementById('current-temp').innerText = '..';
+                });
+        }
+	
+	function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+        let isIIALogging = false; // Logging flag for IIA data
+        let iiaLogData = []; // Array to store IIA data logs
+	//const startTimeStr=""; // Taking start time of logging
+	let file_logdata = ``;
+	let file_iiAlogdata = ``;
+	let file_lakeshorelogdata= ``;
+        let file_powerdata= ``;
+	const dateString = "";
+
+    async function toggleLogging() {
+
+        if (!isLogging && !isIIALogging && !isLakeshoreLogging) {
+                // Start logging
+		
+            isLogging = true;
+            isIIALogging = true;
+            isLakeshoreLogging = true;
+           
+
+            document.getElementById('logButton').innerText = "STOP LOGGING";
+            document.getElementById('logButton').style.backgroundColor = "red";
+		
+
+            logData = []; // Clear temperature log data
+	     	iiaLogData = []; // Clear IIA log data
+            lakeshoreLogData = []; // Clear Lakeshore log data
+		    powerdata = [];
+
+		    const currentDate = new Date();
+            const dateString = currentDate.toISOString().replace(/:/g, '-').split('.')[0];
+
+		    file_logdata = `temperature_log_${dateString}.txt`;
+	        file_iiAlogdata = `${dateString}_IIA.txt`;
+	        file_lakeshorelogdata= `lakeshore_log_${dateString}.txt`;
+            file_powerdata= `power_data_log_${dateString}.txt`;
+
+            alert('Logging started.');
+            await delay(8000);	    		    
+            try {
+                downloadCSV(`temperature_log_${dateString}.txt`, logData);
+                } catch (error) {
+                console.error("Error downloading temperature_log.txt:", error);
+                }
+
+                setTimeout(() => {
+                    try {
+                        downloadCSV(`${dateString}_IIA.txt`, iiaLogData);
+                    }catch (error) {
+                        console.error("Error downloading IIA_log.txt:", error);
+                    }
+                    }, 500);
+
+                    setTimeout(() => {
+                    try {
+                    downloadCSV(`lakeshore_log_${dateString}.txt`, lakeshoreLogData);
+                    } catch (error) {
+                    console.error("Error downloading lakeshore_log.txt:", error);
+                    }
+                    }, 1000);
+
+		} else {
+            // Stop logging
+            isLogging = false;
+            isIIALogging = false;
+            isLakeshoreLogging = false;
+
+            document.getElementById('logButton').innerText = "START LOGGING";
+            document.getElementById('logButton').style.backgroundColor = "green";
+
+		    alert('Logging completed.');
+            }
+        }
+
+
+	//Function to send buffered data to backend every 8 seconds
+	async function sendBufferedDatatoBackend()
+	{
+		if(!isLogging) //|| (logData.length === 0 && iiaLogData.length === 0 && lakeshoreLogData.length === 0) 
+			return;
+		
+		try{
+		    await fetch('/save_log',{
+		    method: 'POST',
+		    headers: {'Content-Type': 'application/json'},
+		    body:JSON.stringify({filename: [file_logdata,file_iiAlogdata,file_lakeshorelogdata,file_powerdata], data: [logData, iiaLogData, lakeshoreLogData,powerdata]})
+		});
+		    logData = []; // Clear temperature log data after sending
+                    iiaLogData = []; // Clear IIA log data after sending
+                    lakeshoreLogData = []; // Clear Lakeshore log data after sending
+                    powerdata = []; // Clear power log data after sending 
+		}catch(error){
+		  console.error("Error in sending log data:",error);
+		}
+		    
+	}
+	
+
+        async function downloadCSV(fileName, dataArray) {
+            try {
+
+                // Fetch target temperature for header (optional for IIA and Lakeshore)
+                const targetTempResponse = await fetch('/get_target_temperature');
+                const targetTempData = await targetTempResponse.json();
+                const targetTemp = targetTempData.target_temp;
+		
+                // Prepare the header lines
+                const headerLines = [
+                    [`Start time: {startTimeStr}`],
+                    [`Stop time: {stopTimeStr}`],
+                    //[durationStr],
+                    [`Target temperature: ${targetTemp}`],
+                ];
+
+                // Combine headers and data
+                const dataWithHeader = [...headerLines]; //...dataArray];
+
+                // Convert to CSV
+                const csvContent = "data:text/csv;charset=utf-8," + dataWithHeader.map(e => e.join(",")).join("\n");
+
+                // Trigger download
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", fileName);
+                document.body.appendChild(link);
+
+                link.click(); // Trigger file download
+                document.body.removeChild(link); // Clean up
+            } catch (error) {
+                console.error(`Error saving ${fileName}:`, error);
+            }
+        }
+		
+        function calculateDuration(startTimeStr, stopTimeStr) {
+            const startTime = new Date(startTimeStr);
+            const stopTime = new Date(stopTimeStr);
+            const durationMs = stopTime - startTime;
+            const durationSeconds = Math.floor(durationMs / 1000);
+            const hours = Math.floor(durationSeconds / 3600);
+            const minutes = Math.floor((durationSeconds % 3600) / 60);
+            const seconds = durationSeconds % 60;
+            return `Duration: ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        function fetchTargetTemperature() {
+            fetch('/get_target_temperature')
+                .then(response => response.json())
+                .then(data => {
+                    const targetTemp = parseFloat(data.target_temp);
+                    document.getElementById('target-temp').innerText = targetTemp + ' K';
+                })
+                .catch(error => console.error('Error fetching target temperature:', error));
+        }
+
+        function fetchKpKiKd() {
+            fetch('/get_kp_ki_kd')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('kp-ki-kd').innerText = data.kpid;
+                })
+                .catch(error => {
+                    console.error('Error fetching Kp, Ki, Kd:', error);
+                    document.getElementById('kp-ki-kd').innerText = 'Refresh!';
+                });
+        }
+
+        function setTargetTemp() {
+            const targetTemp = document.getElementById('set-target-temp').value;
+            fetch('/set_target_temp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ target_temp: targetTemp }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Target Temperature Set!');
+                } else {
+                    alert('Failed to set Target Temperature.');
+                }
+            });
+        }
+
+        function setKpKiKd() {
+            const kp = document.getElementById('set-kp').value;
+            const ki = document.getElementById('set-ki').value;
+            const kd = document.getElementById('set-kd').value;
+            console.log({ kp, ki, kd });
+
+            fetch('/set_kp_ki_kd', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ kp, ki, kd }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {  // Check the success property
+                    alert('PID Constants Set!');
+                } else {
+                    alert('Failed to set PID Constants: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while setting the PID constants.');
+            });
+        }
+
+	    function startCooler() {
+            fetch('/cooler_on', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('startCoolerButton').disabled = true;  
+                document.getElementById('stopCoolerButton').disabled = false; 
+                document.getElementById('cooler-status').innerText = 'ON'; // Update cooler status
+                document.getElementById('cooler-status').style.color = 'green'; // Change 'ON' text color to green
+            })
+            .catch(error => {
+                console.error('Error starting cooler:', error);
+                alert('Failed to start cooler.');
+            });
+        }
+
+        function stopCooler() {
+            fetch('/cooler_off', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('startCoolerButton').disabled = false;  
+                document.getElementById('stopCoolerButton').disabled = true;  
+                document.getElementById('cooler-status').innerText = 'OFF'; // Update cooler status
+                document.getElementById('cooler-status').style.color = 'red'; // Change 'OFF' text color to red
+            })
+            .catch(error => {
+                console.error('Error stopping cooler:', error);
+                alert('Failed to stop cooler.');
+            });
+        }
+        
+        /*=========================================================================================*/
+        let isLakeshoreLogging = false; // Logging flag for Lakeshore data
+        let lakeshoreLogData = []; // Array to store Lakeshore data logs
+
+        function updateTemperatures() {
+            fetch('/get_temperature_data_lakeshore')
+                .then(response => response.json())
+                .then(data => {
+                    // Get the timestamp in IST for the Lakeshore data
+                    const timestamp = getCurrentTimestamp(); // Get current timestamp in IST
+
+                    // Update the temperatures on the page
+                    for (let i = 0; i < data.temperatures.length; i++) {
+                        document.getElementById('sensor' + (i + 1)).querySelector('.temperature').textContent = data.temperatures[i] + ' K';
+                    }
+
+                    // Log the Lakeshore temperatures if logging is active
+                    if (isLogging) {
+                        // Prepare the Lakeshore data log entry (timestamp and all temperatures)
+                        const lakeshoreData = [timestamp, ...data.temperatures];
+                        lakeshoreLogData.push(lakeshoreData); // Push the log data into the array
+                    }
+                })
+                .catch(error => console.error('Error fetching Lakeshore temperature data:', error));
+        }
+
+
+        function updateVoltageCurrent() {
+            fetch('/get_outvoltagecurrent')
+                .then(response => response.json())
+                .then(data => {
+                    const outVoltage = data.outvoltage || 0;
+                    const outCurrent = data.outcurrent || 0;
+
+                    // Update displayed values
+                    document.getElementById('set-voltage').innerText = data.voltage || '---';
+                    document.getElementById('set-current').innerText = data.current || '---';
+                    document.getElementById('out-voltage').innerText = outVoltage || '---';
+                    document.getElementById('out-current').innerText = outCurrent || '---';
+
+                    // Store the data for the last 60 seconds
+                    if (timeData.length < 60) {
+                        timeData.push(timeCounter++);
+                    } else {
+                        timeData.shift(); // Remove the oldest time data
+                        timeData.push(timeCounter++);
+                    }
+
+                    outVoltageData.push(outVoltage);
+                    outCurrentData.push(outCurrent);
+                    powerdata.push([getCurrentTimestamp(),outVoltage,outCurrent]);
+
+                    // Limit data arrays to the last 60 entries
+                    if (outVoltageData.length > 60) {
+                        outVoltageData.shift();
+                    }
+                    if (outCurrentData.length > 60) {
+                        outCurrentData.shift();
+                    }
+
+                    // Update the plots
+                    plotOutputVoltage();
+                    plotOutputCurrent();
+
+                    if ( outCurrent > 0.17 &&  ((Date.now()) - lastAlertTimecurrent >= 1 * 30 * 1000)) {
+                        dispalert(outCurrent,`Output voltage exceeded 0.17: ${outCurrent}`,'current');
+                        
+                    } 
+           
+                
+                   if ( outVoltage > 23.95 &&  ((Date.now()) - lastAlertTimevolt >= 2 * 60 * 1000)) {
+                        dispalert(outVoltage,`Output current exceeded 23.95: ${outVoltage}`,'volt');
+                        
+                   }
+                })
+                .catch(error => console.error('Error fetching voltage and current data:', error));               
+        }
+
+        // Call this function to initialize the dummy plot
+        function plotDummy() {
+            
+            const layout = {
+                title: 'Dummy Plot',
+                xaxis: { title: 'Time (seconds)' },
+                yaxis: { title: 'Value' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('dummyPlot', [trace], layout);
+        }
+
+        // Call these functions to initialize the plots for output voltage and current
+        function plotOutputVoltage() {
+            const trace = {
+                x: timeData,
+                y: outVoltageData,
+                mode: 'lines',
+                name: 'Output Voltage',
+            };
+            const layout = {
+                title: 'Power Supply Voltage',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Voltage (V)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('outVoltagePlot', [trace], layout);
+        }
+
+        function plotOutputCurrent() {
+            const trace = {
+                x: timeData,
+                y: outCurrentData,
+                mode: 'lines',
+                name: 'Output Current',
+            };
+
+            const layout = {
+                title: 'Power Supply Current',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Current (A)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('outCurrentPlot', [trace], layout);
+        }
+
+        function setVoltage() {
+            const voltage = prompt("Enter the voltage value:");
+            if (voltage !== null) {
+                fetch('/set_power_supply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ voltage: parseFloat(voltage), current: null }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('set-voltage').innerText = voltage + ' V';
+                        alert('Voltage updated successfully!');
+                    } else {
+                        alert('Failed to update voltage: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error updating voltage:', error));
+            }
+        }
+
+        function setCurrent() {
+            const current = prompt("Enter the current value:");
+            if (current !== null) {
+                fetch('/set_power_supply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ voltage: null, current: parseFloat(current) }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('set-current').innerText = current + ' A';
+                        alert('Current updated successfully!');
+                    } else {
+                        alert('Failed to update current: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error updating current:', error));
+            }
+        }
+
+        function initPlots() {            
+
+            const layout = {
+                title: '',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: true,
+                    ticks: 'outside'
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accXPlot', [], layout);
+            Plotly.newPlot('accYPlot', [], layout);
+            Plotly.newPlot('accZPlot', [], layout);
+        }
+
+        // Function to fetch real acceleration data from an API or sensor
+        async function fetchAccelerationData() {
+            try {
+                const response = await fetch('/get_data_iia'); // Your API endpoint
+		if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);    																				
+		const data = await response.json();
+
+                // Fetch the latest values
+                const temp = data.temperature[data.temperature.length - 1];
+                const humid = data.humidity[data.humidity.length - 1];
+                const accX = data.accx[data.accx.length - 1];
+                const accY = data.accy[data.accy.length - 1];
+                const accZ = data.accz[data.accz.length - 1];
+
+                if (temp > 20 &&  ((Date.now()) - lastAlertTimeiiatemp >= 1 * 15 * 1000)) {
+                        dispalert(temp,`IIA temperature exceeded 20°C: ${temp}`,'tempiia');
+                        
+                }
+
+                if (humid > 45 &&  ((Date.now()) - lastAlertTimeiiahumid >= 1 * 45 * 1000)) {
+                        dispalert(humid,`IIA humidity exceeded 45%: ${humid}`,'humidiia');
+                        
+                }
+
+
+                let netacc = Number((Math.sqrt(accX ** 2 + accY ** 2 + accZ ** 2)).toFixed(4));
+                if (netacc > 0.89 &&  ((Date.now()) - lastAlertTimeiia >= 1 * 90 * 1000)) {
+                        dispalert(netacc,`Net Acceleration exceeded 0.89: ${netacc}`,'acciia');
+                        
+                }
+                // Update displayed text values
+                document.getElementById('temperature-text').innerText = temp.toFixed(2);
+                document.getElementById('humidity-text').innerText = humid.toFixed(2);
+                document.getElementById('accx-text').innerText = accX.toFixed(2);
+                document.getElementById('accy-text').innerText = accY.toFixed(2);
+                document.getElementById('accz-text').innerText = accZ.toFixed(2);
+      
+
+                // Log data if logging is active
+                if (isIIALogging) {
+                    // Get the current date and time in UTC
+                    const utcDate = new Date().toISOString();
+
+                    // Convert the UTC date to a JavaScript Date object
+                    const date = new Date(utcDate);
+
+                    // Adjust for IST (UTC + 5:30)
+                    date.setHours(date.getHours() + 5);    // Add 5 hours
+                    date.setMinutes(date.getMinutes() + 30);  // Add 30 minutes
+
+                    // Format the timestamp as "YYYY-MM-DD HH:MM:SS"
+                    const timestamp = date.toISOString().replace("T", " ").substring(0, 19); // Remove milliseconds and "Z"
+
+                    // Add the timestamp with other data
+                    iiaLogData.push([timestamp, temp, humid, accX, accY, accZ]);
+                }
+
+                // Update the plots
+                timeCounter++;
+                timeSeries.push(timeCounter);
+                accXValues.push(accX);
+                accYValues.push(accY);
+                accZValues.push(accZ);
+
+                // Limit data arrays to the last 60 entries
+                if (timeSeries.length > 60) timeSeries.shift();
+                if (accXValues.length > 60) accXValues.shift();
+                if (accYValues.length > 60) accYValues.shift();
+                if (accZValues.length > 60) accZValues.shift();
+
+                // Plot updates
+                plotAccX();
+                plotAccY();
+                plotAccZ();
+            } catch (error) {
+                console.error('Error fetching acceleration data:', error);
+            }
+        }
+
+
+        function plotAccX() {
+            const trace = {
+                x: timeSeries,
+                y: accXValues,
+                mode: 'lines',
+                name: 'Acceleration X',
+            };
+
+            const layout = {
+                title: 'Acceleration X (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accXPlot', [trace], layout);
+        }
+
+        function plotAccY() {
+            const trace = {
+                x: timeSeries,
+                y: accYValues,
+                mode: 'lines',
+                name: 'Acceleration Y',
+            };
+
+            const layout = {
+                title: 'Acceleration Y (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks 
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accYPlot', [trace], layout);
+        }
+
+        function plotAccZ() {
+            const trace = {
+                x: timeSeries,
+                y: accZValues,
+                mode: 'lines',
+                name: 'Acceleration Z',
+            };
+
+            const layout = {
+                title: 'Acceleration Z (m/s²)',
+                xaxis: { 
+                    title: 'Time (seconds)',
+                    showticklabels: false, // Hides the tick labels
+                    ticks: '' // Hides the ticks
+                },
+                yaxis: { title: 'Acceleration (m/s²)' },
+                plot_bgcolor: '#121212',
+                paper_bgcolor: '#121212',
+                font: { color: '#ffffff' },
+            };
+
+            Plotly.newPlot('accZPlot', [trace], layout);
+        }
+
+    // The Alert box
+const modal = document.getElementById("alertmodal");
+const header = document.getElementById("alertHeader");
+let isDragging = false;
+let offsetX, offsetY;
+
+// Drag functionality
+header.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    offsetX = e.clientX - modal.getBoundingClientRect().left;
+    offsetY = e.clientY - modal.getBoundingClientRect().top;
+    document.body.style.userSelect = "none";
+});
+
+document.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+        modal.style.left = `${e.clientX - offsetX}px`;
+        modal.style.top = `${e.clientY - offsetY}px`;
+        modal.style.transform = "none";
+    }
+});
+
+document.addEventListener("mouseup", () => {
+    isDragging = false;
+    document.body.style.userSelect = "";
+});
+
+
+// Alert logic
+let violationQueue = [];
+let isAlertOpen = false;
+
+function generateAlertID() {
+    return 'alert_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+}
+
+function dispalert(temp,message,type) {
+    
+    if (isAlertOpen || violationQueue.length > 0) return;
+
+    const alertId = generateAlertID();
+
+
+    const payload = {
+        alert_id: alertId,
+        timestamp_triggered: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+        temperature: temp,
+        alert_message: message
+    };
+
+    fetch('/logalert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    // Store both temp and alertId together
+    violationQueue.push({ temp, alertId, type});
+
+    if (!isAlertOpen){
+       showNextViolation(message,type);
+    }
+    
+}
+
+function showNextViolation(message,type) {
+    if (violationQueue.length > 0) {
+        isAlertOpen = true;
+        const { temp } = violationQueue[0];
+        document.getElementById('alertTitle').innerText = message;
+        document.getElementById('alertForm').reset();
+        document.getElementById('alertmodal').style.display = 'block';
+    } else {
+        isAlertOpen = false;
+    }
+}
+
+document.getElementById('alertForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const { temp, alertId, type} = violationQueue[0];
+
+    const name = document.getElementById('name').value;
+    const comment = this.comment.value;
+    
+    const payload = {
+        alert_id: alertId,
+        name: name,
+        comment: comment,
+        timestamp_acknowledged: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    };
+
+    const response = await fetch('/logalert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+        this.reset();
+        document.getElementById('alertmodal').style.display = 'none';
+        if (type === 'temp') lastAlertTimetemp = Date.now();
+        else if (type === 'acciia') lastAlertTimeiia = Date.now();
+        else if (type === 'tempiia') lastAlertTimeiiatemp = Date.now();
+        else if (type === 'humidiia') lastAlertTimeiiahumid = Date.now();
+        else if (type === 'volt') lastAlertTimevolt = Date.now();
+        else if (type === 'current') lastAlertTimecurrent = Date.now();
+        else if (type === 'sen1') lastAlertTimesen1 = Date.now();
+        else if (type === 'sen2') lastAlertTimesen2 = Date.now();
+        else if (type === 'sen3') lastAlertTimesen3 = Date.now();
+        else if (type === 'ethernet') lastAlertTimeethernet = Date.now();
+        violationQueue.shift();
+        setTimeout(showNextViolation, 300);
+    } else {
+        alert("Error: Could not acknowledge alert.");
+    }
+});
+
+
+        // Initialize plots on page load
+        initPlots();
+
+        plotAccX();
+        plotAccY();
+        plotAccZ();
+	
+        // Update the voltage and current values every second
+        setInterval(updateVoltageCurrent, 2000);
+        // Other intervals remain the same
+        setInterval(updateTemperatures, 2000); // Update every 2 seconds
+        setInterval(updateLakeshoreTemperatures, 1000); // Update every 1 second
+        initPlot();
+        setInterval(fetchCurrentTemperature, 8000); // Update temperature every 8 seconds
+        
+        // Initial plot setup
+        // Update every second
+        //setInterval(updateVoltageCurrent, 2000);
+        setInterval(fetchAccelerationData, 4000); // Fetch data every 1000ms (1 second)
+
+        // Then every 10 seconds (10000 milliseconds)
+        setInterval(checkEthernetStatus, 10000);
+
+	//Sending data every 5 seconds
+	setInterval(async () => {
+		    await sendBufferedDatatoBackend();
+		    },9000);
+
+    
+    </script>
+</body>
+</html>
