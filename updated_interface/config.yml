@@ -1,0 +1,43 @@
+power_supply:
+  power_usbpath: "/dev/serial/by-path/pci-0000:00:14.0-usb-0:9.2:1.0-port0" # Power System USB path
+  currentalerttime: 0.5 * 60 * 1000 #Timer interval to redisplay the current alert message
+  voltagealerttime: 2 * 60 * 1000 #Timer interval to redisplay the voltage alert message
+  currentalertcond : 5 # Threshold current value when exceeded the alert message gets displayed
+  voltagealertcond : 30 # Threshold voltage value when exceeded the alert message gets displayed
+  powerfuncinterval: 2000 #Time interval for updateVoltageCurrent() function call
+  powerconnecalerttime: 0.25 * 60 * 1000 #Time interval to redisplay the alert message for connection loss
+
+Cryo_temp:
+  cryo_usbpath : "/dev/serial/by-path/pci-0000:00:14.0-usb-0:9.4:1.0-port0" # Cryogenic System USB path
+  tempfuncinterval: 8000 #Time interval for fetchCurrentTemperature() function call
+  tempalerttime : 1 * 60 * 1000 #Timer interval to redisplay the temperature alert message
+  tempalertcond : 340 # Threshold voltage value when exceeded the alert message gets displayed
+
+lakeshore_temp:
+  lakeshore_usbpath : "/dev/serial/by-path/pci-0000:00:14.0-usb-0:9.4:1.0-port1" # Lakeshore System USB path
+  lakeshorefuncinterval : 2000 #Time interval for updateTemperatures function() call
+  lakeshoresen1alerttime : 1.25 * 60 * 1000 #Timer interval to redisplay the voltage alert message
+  lakeshoresen2alerttime : 1.75 * 60 * 1000 #Timer interval to redisplay the voltage alert message
+  lakeshoresen3alerttime : 2 * 60 * 1000 #Timer interval to redisplay the voltage alert message
+  lakeshoresen1alertcond : 340 # Threshold lakeshore sensor 1 value when exceeded the alert message gets displayed
+  lakeshoresen2alertcond : 340 # Threshold lakeshore sensor 2 value when exceeded the alert message gets displayed
+  lakeshoresen3alertcond : 340 # Threshold lakeshore sensor 3 value when exceeded the alert message gets displayed
+  lakeshoreplotinterval : 1000 # Time interval for updateLakeshoreTemperatures() function call
+  lakeshoreconnecalerttime : 0.25 * 60 * 1000 #Time interval to redisplay the alert message for connection loss
+  
+iia_logger:
+  iia_usbpath : "/dev/serial/by-path/pci-0000:00:14.0-usb-0:9.1:1.0-port0" # IIA data logger USB path
+  iiafuncinterval : 4000 #Time interval for fetchAccelerationData() function call
+  iiatempalerttime : 1 * 60 * 1000 #Timer interval to redisplay the IIA temperature alert message
+  iiahumidalerttime : 1 * 60 * 1000 #Timer interval to redisplay the humidity alert message
+  iianetaccalertime : 1.5 * 60 * 1000 #Timer interval to redisplay the net acceleration alert message
+  iiatempalertcond :  30 #20 Threshold IIA temperature value when exceeded the alert message gets displayed
+  iiahumidalertcond : 45 #45 Threshold humidity value when exceeded the alert message gets displayed
+  iianetaccalertcond : 2 #0.89 Threshold net acceleration value when exceeded the alert message gets displayed
+  iiaconnecalerttime : 0.25 * 60 * 1000 #Time interval to redisplay the alert message for connection loss
+
+datatobackendinterval : 9000 #Time interval for sendBufferedDatatoBackend() function call to send data to backend for logging
+ethernetstatusinterval : 10000 #Time interval for checkEthernetStatus() function call to check for ethernet status
+alertstatus : 0 # 0 - OFF, 1 - ON :  To turn alert system ON or OFF
+connectionalerts : 3000 #Time interval for checkConnectionAlerts() function call to check status of connections
+

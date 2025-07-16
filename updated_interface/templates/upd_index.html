@@ -71,6 +71,65 @@
             text-align: left;
             width: 75%
         }
+        .dewar-temp-container {
+            flex: 1;
+        }
+        
+        .dewar-box {
+            width: 400px;     
+            max-width: 100%;  
+        }
+        /* System Status Box Styles */
+        .system-status-box {
+            background-color: #282828;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #ffffff;
+            margin-right: 15px;
+            width: 150px;
+            flex-shrink: 0;
+        }
+
+        .system-status-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #555;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-size: 1em;
+            color: #cccccc;
+            font-weight: medium;
+        }
+
+        .indicator-light {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+        }
+
+        .top-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
         .info-container {
             border: 2px solid #ffffff; 
             border-radius: 5px;
@@ -221,17 +280,44 @@
         <h1>APSERa Control Interface</h1>
         <div class="container">
             <div class="left-pane">
-                <div class="box_leftpane_topborders">
-                    <div class="info">
-                        Dewar Temp: <div id="current-temp" class="box">...</div>
+                <div class="top-row">
+                    <div class="system-status-box">
+                        <div class="system-status-title">System Status</div>
+                        
+                        <div class="status-item">
+                            <span class="status-label">Lakeshore</span>
+                            <div id="lakeshore-indicator" class="indicator-light"></div>
+                        </div>
+
+                        <div class="status-item">
+                            <span class="status-label">Current</span>
+                            <div id="current-indicator" class="indicator-light"></div>
+                        </div>
+
+                        <div class="status-item">
+                            <span class="status-label">Cryogenic</span>
+                            <div id="cryo-indicator" class="indicator-light"></div>
+                        </div>
+
+                        <div class="status-item">
+                            <span class="status-label">IIA</span>
+                            <div id="iia-indicator" class="indicator-light"></div>
+                        </div>
                     </div>
-                    <div class="info">
-                        Current Target Temp: <div id="target-temp" class="box">...</div>
-                        <button class="styled-button" onclick="fetchTargetTemperature()">Get Target Temp</button>
-                    </div>
-                    <div class="info">
-                        Current Kp, Ki, Kd: <div id="kp-ki-kd" class="box">...</div>
-                        <button class="styled-button" onclick="fetchKpKiKd()">Fetch Kp, Ki, Kd</button>
+                    <div class="dewar-temp-container">
+                        <div class="box_leftpane_topborders dewar-box">
+                            <div class="info">
+                                Dewar Temp: <div id="current-temp" class="box">...</div>
+                            </div>
+                            <div class="info">
+                                Current Target Temp: <div id="target-temp" class="box">...</div>
+                                <button class="styled-button" onclick="fetchTargetTemperature()">Get Target Temp</button>
+                            </div>
+                            <div class="info">
+                                Current Kp, Ki, Kd: <div id="kp-ki-kd" class="box">...</div>
+                                <button class="styled-button" onclick="fetchKpKiKd()">Fetch Kp, Ki, Kd</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -342,8 +428,65 @@
 
         </div>
         <script>
+            let alertstatus = 1;
+            let configVars = {};  // Global object to store config values
+            let configready = new Promise((resolve, reject) => {
+            // Call this once at page load
+	    fetch('/get_config')
+	    .then(response => response.json())
+	    .then(config => {
+	     configVars = processConfig(config);  // Populate global vars
+             resolve();
+	    })
+	    .catch(reject);
+            });
+            function processConfig(config) {
+	    return {
+	    // Power Supply
+	    currentAlertTime: eval(config.power_supply.currentalerttime),
+	    voltageAlertTime: eval(config.power_supply.voltagealerttime),
+	    currentAlertCond: config.power_supply.currentalertcond,
+	    voltageAlertCond: config.power_supply.voltagealertcond,
+	    powerFuncInterval: config.power_supply.powerfuncinterval,
+            poweralertconnectime: eval(config.power_supply.powerconnecalerttime),
+
+	    // Cryo Temp
+	    cryoFuncInterval: config.Cryo_temp.tempfuncinterval,
+	    cryoAlertTime: eval(config.Cryo_temp.tempalerttime),
+	    cryoAlertCond: config.Cryo_temp.tempalertcond,
+
+	    // Lakeshore Temp
+	    lakeFuncInterval: config.lakeshore_temp.lakeshorefuncinterval,
+	    lakeSen1Time: eval(config.lakeshore_temp.lakeshoresen1alerttime),
+	    lakeSen2Time: eval(config.lakeshore_temp.lakeshoresen2alerttime),
+	    lakeSen3Time: eval(config.lakeshore_temp.lakeshoresen3alerttime),
+	    lakeSen1Cond: config.lakeshore_temp.lakeshoresen1alertcond,
+	    lakeSen2Cond: config.lakeshore_temp.lakeshoresen2alertcond,
+	    lakeSen3Cond: config.lakeshore_temp.lakeshoresen3alertcond,
+	    lakePlotInterval: config.lakeshore_temp.lakeshoreplotinterval,
+            lakeshorealertconnectime: eval(config.lakeshore_temp.lakeshoreconnecalerttime),
+
+	    // IIA Logger
+	    iiaFuncInterval: config.iia_logger.iiafuncinterval,
+	    iiaTempTime: eval(config.iia_logger.iiatempalerttime),
+	    iiaHumidTime: eval(config.iia_logger.iiahumidalerttime),
+	    iiaNetTime: eval(config.iia_logger.iianetaccalertime),
+	    iiaTempCond: config.iia_logger.iiatempalertcond,
+	    iiaHumidCond: config.iia_logger.iiahumidalertcond,
+	    iiaNetCond: config.iia_logger.iianetaccalertcond,
+            iiaalertconnectime: eval(config.iia_logger.iiaconnecalerttime),
+
+	    // General App Intervals
+	    dataToBackendInterval: config.datatobackendinterval,
+	    ethernetStatusInterval: config.ethernetstatusinterval,
+            statusalert: config.alertstatus,
+            alertconnection: config.connectionalerts
+	  };
+	}
+
             let lakeshoreTemperatures = [];
             let lastAlertTimesen1 = lastAlertTimesen2 = lastAlertTimesen3 = 0;
+            
             function plotLakeshoreTemperatures() {
                 const sensorsCount = 8;
                 const traces = [];
@@ -375,17 +518,17 @@
                     .then(response => response.json())
                     .then(data => {
                         lakeshoreTemperatures.push(data.temperatures);
-
-                        if (data.temperatures[0] > 297 &&  ((Date.now()) - lastAlertTimesen1 >= 1 * 75 * 1000)) {
-                        dispalert(data.temperatures[0],`Lakeshore's sensor 1 temp exceeded 297K: ${data.temperatures[0]}`,'sen1');
+                        if(alertstatus == 1){
+                           if (data.temperatures[0] > configVars.lakeSen1Cond &&  ((Date.now()) - lastAlertTimesen1 >=  configVars.lakeSen1Time)) {
+                        dispalert(data.temperatures[0],`Lakeshore's sensor 1 temp exceeded ${configVars.lakeSen1Cond}K: ${data.temperatures[0]}`,'sen1');
                         }
-                        if (data.temperatures[1] > 297 &&  ((Date.now()) - lastAlertTimesen2 >= 1 * 105 * 1000)) {
-                        dispalert(data.temperatures[1],`Lakeshore's sensor 2 temp exceeded 297K: ${data.temperatures[1]}`,'sen2');
+                        if (data.temperatures[1] > configVars.lakeSen2Cond &&  ((Date.now()) - lastAlertTimesen2 >= configVars.lakeSen2Time)) {
+                        dispalert(data.temperatures[1],`Lakeshore's sensor 2 temp exceeded ${configVars.lakeSen2Cond}K: ${data.temperatures[1]}`,'sen2');
                         }
-                        if (data.temperatures[2] > 297 &&  ((Date.now()) - lastAlertTimesen3 >= 1 * 120 * 1000)) {
-                        dispalert(data.temperatures[2],`Lakeshore's sensor 3 temp exceeded 297K: ${data.temperatures[2]}`,'sen3');
+                        if (data.temperatures[2] > configVars.lakeSen3Cond &&  ((Date.now()) - lastAlertTimesen3 >= configVars.lakeSen3Time)) {
+                        dispalert(data.temperatures[2],`Lakeshore's sensor 3 temp exceeded ${configVars.lakeSen3Cond}K: ${data.temperatures[2]}`,'sen3');
                         }
-
+                       }
                         
                         if (lakeshoreTemperatures.length > 120) {
                             lakeshoreTemperatures.shift(); // Keep the last 60 readings
@@ -393,7 +536,11 @@
                         plotLakeshoreTemperatures();
                     })
                     .catch(error => console.error('Error fetching lakeshore temperatures:', error));
-            }  
+            }
+
+        
+        
+            
         </script>
     </div>
 
@@ -405,7 +552,7 @@
         let temperatureDump = []; // To store the temperature data
         let logData = []; // To store log data for CSV
         let powerdata = [];
-        let lastAlertTimetemp = lastAlertTimevolt = lastAlertTimeiia = lastAlertTimecurrent = lastAlertTimeiiatemp = lastAlertTimeiiahumid = lastAlertTimeethernet = 0;
+        let lastAlertTimetemp = lastAlertTimevolt = lastAlertTimeiia = lastAlertTimecurrent = lastAlertTimeiiatemp =     lastAlertTimeiiahumid = lastAlertTimeethernet = lastalertpowerconec = lastalertiiaconnec = lastalertlkshrconnec = 0;
 
         
 
@@ -443,7 +590,7 @@
         .catch(err => {
             console.error("Failed to fetch ethernet status:", err);
         });
-}
+        }
 
         function formatTime(seconds) {
             const date = new Date(0);
@@ -456,13 +603,13 @@
              triggeredTime=new Date(new Date().getTime() + istOffset).toISOString();
              document.getElementbyId("customAlertMessage").textContent=message;
              document.getElementbyid("customAlert").style.display="block";
-}
+        }
    
         function acknowledgeAlert(){
              const istOffset = 5.5 * 60 * 60 * 1000;
              acknowledgeTime=new Date(new Date().getTime() + istOffset).toISOString();
              document.getElementById("customAlert").style.display="none";
-}
+        }
 
         function getCurrentTimestamp() {
             const now = new Date();
@@ -575,11 +722,12 @@
                     } else {
                         document.getElementById('current-temp').innerText = '.';
                     }
-                  //alert(((Date.now()) - lastAlertTime)/ 60*1000);
-                  if (currentTemp > 290 &&  ((Date.now()) - lastAlertTimetemp >= 1 * 60 * 1000)) {
-                        dispalert(currentTemp,`Temperature exceeded 290K: ${currentTemp}`,'temp');
+                  
+                  if(alertstatus == 1){
+                    if (currentTemp > configVars.cryoAlertCond &&  ((Date.now()) - lastAlertTimetemp >= configVars.cryoAlertTime)) {
+                        dispalert(currentTemp,`Temperature exceeded ${configVars.cryoAlertCond}K: ${currentTemp}`,'temp');
                      }
-                   
+                  }
                 })
                 .catch(error => {
                     console.error('Error fetching temperature:', error);
@@ -599,67 +747,74 @@
         let file_powerdata= ``;
 	const dateString = "";
 
-    async function toggleLogging() {
+        async function toggleLogging() {
 
-        if (!isLogging && !isIIALogging && !isLakeshoreLogging) {
+            if (!isLogging && !isIIALogging && !isLakeshoreLogging) {
                 // Start logging
 		
-            isLogging = true;
-            isIIALogging = true;
-            isLakeshoreLogging = true;
+                isLogging = true;
+                isIIALogging = true;
+                isLakeshoreLogging = true;
            
 
-            document.getElementById('logButton').innerText = "STOP LOGGING";
-            document.getElementById('logButton').style.backgroundColor = "red";
+                document.getElementById('logButton').innerText = "STOP LOGGING";
+                document.getElementById('logButton').style.backgroundColor = "red";
 		
 
-            logData = []; // Clear temperature log data
-	     	iiaLogData = []; // Clear IIA log data
-            lakeshoreLogData = []; // Clear Lakeshore log data
-		    powerdata = [];
+                logData = []; // Clear temperature log data
+		iiaLogData = []; // Clear IIA log data
+                lakeshoreLogData = []; // Clear Lakeshore log data
+		powerdata = [];
 
-		    const currentDate = new Date();
-            const dateString = currentDate.toISOString().replace(/:/g, '-').split('.')[0];
+		const currentDate = new Date();
+                const dateString = currentDate.toISOString().replace(/:/g, '-').split('.')[0];
 
-		    file_logdata = `temperature_log_${dateString}.txt`;
+		file_logdata = `temperature_log_${dateString}.txt`;
 	        file_iiAlogdata = `${dateString}_IIA.txt`;
 	        file_lakeshorelogdata= `lakeshore_log_${dateString}.txt`;
-            file_powerdata= `power_data_log_${dateString}.txt`;
+                file_powerdata= `power_data_log_${dateString}.txt`;
 
-            alert('Logging started.');
-            await delay(8000);	    		    
-            try {
-                downloadCSV(`temperature_log_${dateString}.txt`, logData);
+		alert('Logging started.');
+		await delay(8000);
+
+
+				    		    
+		try {
+                 downloadCSV(`temperature_log_${dateString}.txt`, logData);
+ 
                 } catch (error) {
-                console.error("Error downloading temperature_log.txt:", error);
+                 console.error("Error downloading temperature_log.txt:", error);
                 }
 
                 setTimeout(() => {
-                    try {
-                        downloadCSV(`${dateString}_IIA.txt`, iiaLogData);
-                    }catch (error) {
-                        console.error("Error downloading IIA_log.txt:", error);
-                    }
-                    }, 500);
+                try {
+                    downloadCSV(`${dateString}_IIA.txt`, iiaLogData);
+                }catch (error) {
+                    console.error("Error downloading IIA_log.txt:", error);
+                }
+                }, 500);
 
-                    setTimeout(() => {
-                    try {
-                    downloadCSV(`lakeshore_log_${dateString}.txt`, lakeshoreLogData);
-                    } catch (error) {
-                    console.error("Error downloading lakeshore_log.txt:", error);
-                    }
-                    }, 1000);
+                setTimeout(() => {
+                try {
+                   downloadCSV(`lakeshore_log_${dateString}.txt`, lakeshoreLogData);
+                } catch (error) {
+                   console.error("Error downloading lakeshore_log.txt:", error);
+                }
+                }, 1000);
 
-		} else {
-            // Stop logging
-            isLogging = false;
-            isIIALogging = false;
-            isLakeshoreLogging = false;
+		
 
-            document.getElementById('logButton').innerText = "START LOGGING";
-            document.getElementById('logButton').style.backgroundColor = "green";
+            } else {
+                // Stop logging
+                isLogging = false;
+                isIIALogging = false;
+                isLakeshoreLogging = false;
 
-		    alert('Logging completed.');
+
+                document.getElementById('logButton').innerText = "START LOGGING";
+                document.getElementById('logButton').style.backgroundColor = "green";
+
+		alert('Logging completed.');
             }
         }
 
@@ -689,12 +844,28 @@
 
         async function downloadCSV(fileName, dataArray) {
             try {
+		/*
+                if (dataArray.length === 0) {
+                    console.warn(`No data to save for ${fileName}`);
+                    return; // Skip saving empty files
+                }
+		*/
 
                 // Fetch target temperature for header (optional for IIA and Lakeshore)
                 const targetTempResponse = await fetch('/get_target_temperature');
                 const targetTempData = await targetTempResponse.json();
                 const targetTemp = targetTempData.target_temp;
 		
+		
+                // Extract the stop time
+		//const startTimeStr = getCurrentTimestamp() || 'N/A';
+		//const startTimeStr = dataArray[0][0] || 'N/A';
+                //const stopTimeStr = dataArray[dataArray.length - 1][0] || 'N/A';
+
+                //const durationStr = startTimeStr !== 'N/A' && stopTimeStr !== 'N/A'
+                  //  ? calculateDuration(startTimeStr, stopTimeStr)
+                   // : 'Duration: N/A';
+
                 // Prepare the header lines
                 const headerLines = [
                     [`Start time: {startTimeStr}`],
@@ -904,23 +1075,29 @@
                     plotOutputVoltage();
                     plotOutputCurrent();
 
-                    if ( outCurrent > 0.17 &&  ((Date.now()) - lastAlertTimecurrent >= 1 * 30 * 1000)) {
-                        dispalert(outCurrent,`Output voltage exceeded 0.17: ${outCurrent}`,'current');
+                    if(alertstatus == 1){
+                      if ( outCurrent > configVars.currentAlertCond &&  ((Date.now()) - lastAlertTimecurrent >= configVars.currentAlertTime)) {
+                        dispalert(outCurrent,`Output voltage exceeded ${configVars.currentAlertCond}: ${outCurrent}`,'current');
                         
                     } 
            
                 
-                   if ( outVoltage > 23.95 &&  ((Date.now()) - lastAlertTimevolt >= 2 * 60 * 1000)) {
-                        dispalert(outVoltage,`Output current exceeded 23.95: ${outVoltage}`,'volt');
+                   if ( outVoltage > configVars.voltageAlertCond &&  ((Date.now()) - lastAlertTimevolt >= configVars.currentAlertTime)) {
+                        dispalert(outVoltage,`Output current exceeded ${configVars.voltageAlertCond}: ${outVoltage}`,'volt');
                         
                    }
+                  }
                 })
-                .catch(error => console.error('Error fetching voltage and current data:', error));               
+                .catch(error => console.error('Error fetching voltage and current data:', error));
+
+                
+               
         }
 
         // Call this function to initialize the dummy plot
         function plotDummy() {
             
+
             const layout = {
                 title: 'Dummy Plot',
                 xaxis: { title: 'Time (seconds)' },
@@ -980,6 +1157,8 @@
 
             Plotly.newPlot('outCurrentPlot', [trace], layout);
         }
+
+       
 
         function setVoltage() {
             const voltage = prompt("Enter the voltage value:");
@@ -1060,22 +1239,24 @@
                 const accX = data.accx[data.accx.length - 1];
                 const accY = data.accy[data.accy.length - 1];
                 const accZ = data.accz[data.accz.length - 1];
-
-                if (temp > 20 &&  ((Date.now()) - lastAlertTimeiiatemp >= 1 * 15 * 1000)) {
-                        dispalert(temp,`IIA temperature exceeded 20°C: ${temp}`,'tempiia');
+ 
+                if(alertstatus == 1){
+                  if (temp > configVars.iiaTempCond &&  ((Date.now()) - lastAlertTimeiiatemp >= configVars.iiaTempTime)) {
+                        dispalert(temp,`IIA temperature exceeded ${configVars.iiaTempCond}°C: ${temp}`,'tempiia');
                         
-                }
+                 }
 
-                if (humid > 45 &&  ((Date.now()) - lastAlertTimeiiahumid >= 1 * 45 * 1000)) {
-                        dispalert(humid,`IIA humidity exceeded 45%: ${humid}`,'humidiia');
+                if (humid > configVars.iiaHumidCond &&  ((Date.now()) - lastAlertTimeiiahumid >= configVars.iiaHumidTime)) {
+                        dispalert(humid,`IIA humidity exceeded ${configVars.iiaHumidCond}%: ${humid}`,'humidiia');
                         
-                }
+                 }
 
 
                 let netacc = Number((Math.sqrt(accX ** 2 + accY ** 2 + accZ ** 2)).toFixed(4));
-                if (netacc > 0.89 &&  ((Date.now()) - lastAlertTimeiia >= 1 * 90 * 1000)) {
-                        dispalert(netacc,`Net Acceleration exceeded 0.89: ${netacc}`,'acciia');
+                if (netacc > configVars.iiaNetCond &&  ((Date.now()) - lastAlertTimeiia >= configVars.iiaNetTime)) {
+                        dispalert(netacc,`Net Acceleration exceeded ${configVars.iiaNetCond}: ${netacc}`,'acciia');
                         
+                 }
                 }
                 // Update displayed text values
                 document.getElementById('temperature-text').innerText = temp.toFixed(2);
@@ -1199,7 +1380,7 @@
             Plotly.newPlot('accZPlot', [trace], layout);
         }
 
-    // The Alert box
+// The Alert box
 const modal = document.getElementById("alertmodal");
 const header = document.getElementById("alertHeader");
 let isDragging = false;
@@ -1226,22 +1407,137 @@ document.addEventListener("mouseup", () => {
     document.body.style.userSelect = "";
 });
 
-
-// Alert logic
-let violationQueue = [];
+// Track active alerts to prevent duplicates
+let activeAlerts = new Set();
 let isAlertOpen = false;
+let violationQueue = [];
+
+// Additional tracking to prevent rapid successive calls
+let lastAlertTime = {};
+const ALERT_COOLDOWN = 1000; // 1 second cooldown between same alert types
+
+//Function to check the connection status of all systems
+async function checkConnectionAlerts() { 
+    try {
+        const res = await fetch('/get_connection_alerts');
+        const alerts = await res.json();
+
+        for (const alertobj of alerts) {
+            if (!alertobj || !alertobj.device) {
+                console.warn("Invalid alert object:", alertobj);
+                continue;
+            }
+
+            // Handle connection found events first (regardless of timing)
+            if (alertobj.type === 'connectionfound') {
+                if (alertobj.device === 'Lakeshore System') {
+                    // Clear the active alert and update status
+                    activeAlerts.delete('connectionlostlkshr');
+                    setSystemStatus(true, "lakeshore-indicator", "cryo-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} and Cryogenic System reconnected!`, 'connectionfoundlkshr');
+                    }
+                }
+                else if (alertobj.device === 'IIA System') {
+                    activeAlerts.delete('connectionlostiia');
+                    setSystemStatus(true, "iia-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} reconnected!`, 'connectionfoundiia');
+                    }
+                }
+                else if (alertobj.device === 'Power System') {
+                    activeAlerts.delete('connectionlostpwr');
+                    setSystemStatus(true, "current-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} reconnected!`, 'connectionfoundpwr');
+                    }
+                }
+            }
+            // Handle connection lost events (only if not already alerted)
+            else if (alertobj.device === 'Lakeshore System' && 
+                     ((Date.now()) - lastalertlkshrconnec >= configVars.lakeshorealertconnectime)) {
+                
+                const alertKey = 'connectionlostlkshr';
+                if (!activeAlerts.has(alertKey)) {
+                    setSystemStatus(false, "lakeshore-indicator", "cryo-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} and Cryogenic System disconnected!`, alertKey);
+                    }
+                }
+            }
+            else if (alertobj.device === 'IIA System' && 
+                     ((Date.now()) - lastalertiiaconnec >= configVars.iiaalertconnectime)) {
+                
+                const alertKey = 'connectionlostiia';
+                if (!activeAlerts.has(alertKey)) {
+                    setSystemStatus(false, "iia-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} disconnected!`, alertKey);
+                    }
+                }
+            }
+            else if (alertobj.device === 'Power System' && 
+                     ((Date.now()) - lastalertpowerconec >= configVars.poweralertconnectime)) {
+                
+                const alertKey = 'connectionlostpwr';
+                if (!activeAlerts.has(alertKey)) {
+                    setSystemStatus(false, "current-indicator");
+                    if(alertstatus) {
+                        dispalert(null, `${alertobj.device} disconnected!`, alertKey);
+                    }
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error("Error checking connection alerts:", error);
+    }
+}
+// Ensure activeAlerts and other necessary variables are defined globally or within scope
+setSystemStatus(true,"lakeshore-indicator", "cryo-indicator","iia-indicator", "current-indicator" )
+
+function setSystemStatus(isConnected, ...elementIds) {
+    const color = isConnected ? 'green' : 'red';
+    elementIds.forEach(id => {
+        document.getElementById(id)?.style.setProperty('background-color', color);
+    });
+}
 
 function generateAlertID() {
     return 'alert_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 }
 
-function dispalert(temp,message,type) {
+function dispalert(temp, message, type) {
+    // Validate inputs
+    if (!message || message.trim() === "") {
+        console.warn("Skipping alert with empty message");
+        return;
+    }
     
-    if (isAlertOpen || violationQueue.length > 0) return;
+    if (!type) {
+        console.warn("Skipping alert with no type");
+        return;
+    }
+
+    const now = Date.now();
+    
+    // Check cooldown period to prevent rapid successive alerts
+    if (lastAlertTime[type] && (now - lastAlertTime[type]) < ALERT_COOLDOWN) {
+        console.log(`Alert ${type} is in cooldown period`);
+        return;
+    }
+
+    // Check if alert is already active or if alerts are disabled
+    if (activeAlerts.has(type) || alertstatus === 0) {
+        console.log(`Alert ${type} already active or alerts disabled - not logging duplicate`);
+        return;
+    }
+
+    // Mark this alert type as active BEFORE logging and queuing
+    activeAlerts.add(type);
+    lastAlertTime[type] = now;
 
     const alertId = generateAlertID();
-
-
     const payload = {
         alert_id: alertId,
         timestamp_triggered: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
@@ -1249,37 +1545,73 @@ function dispalert(temp,message,type) {
         alert_message: message
     };
 
+    // Log the alert only once per type
     fetch('/logalert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
+    }).catch(error => {
+        console.error("Error logging alert:", error);
+        // If logging fails, remove from active alerts so it can be retried
+        activeAlerts.delete(type);
     });
 
-    // Store both temp and alertId together
-    violationQueue.push({ temp, alertId, type});
-
-    if (!isAlertOpen){
-       showNextViolation(message,type);
-    }
+    // Add to queue
+    violationQueue.push({ temp, alertId, type, message });
     
+    // Show alert if none is currently open
+    if (!isAlertOpen) {
+        showNextViolation();
+    }
 }
 
-function showNextViolation(message,type) {
-    if (violationQueue.length > 0) {
+function showNextViolation() {
+    if (violationQueue.length > 0 && !isAlertOpen) {
         isAlertOpen = true;
-        const { temp } = violationQueue[0];
-        document.getElementById('alertTitle').innerText = message;
-        document.getElementById('alertForm').reset();
-        document.getElementById('alertmodal').style.display = 'block';
+        const { temp, message, type } = violationQueue[0];
+
+        // Double-check message validity
+        if (!message || message.trim() === "") {
+            console.warn("Skipping undefined alert message in showNextViolation");
+            violationQueue.shift();
+            // Remove from active alerts if it was there
+            if (type) {
+                activeAlerts.delete(type);
+            }
+            isAlertOpen = false;
+            // Try next alert
+            setTimeout(showNextViolation, 100);
+            return;
+        }
+
+        // Display the alert
+        const alertTitleElement = document.getElementById('alertTitle');
+        const alertFormElement = document.getElementById('alertForm');
+        const alertModalElement = document.getElementById('alertmodal');
+
+        if (alertTitleElement && alertFormElement && alertModalElement) {
+            alertTitleElement.innerText = message;
+            alertFormElement.reset();
+            alertModalElement.style.display = 'block';
+        } else {
+            console.error("Alert modal elements not found");
+            isAlertOpen = false;
+        }
     } else {
         isAlertOpen = false;
     }
 }
 
+// Alert form submission handler
 document.getElementById('alertForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    const { temp, alertId, type} = violationQueue[0];
+    
+    if (violationQueue.length === 0) {
+        console.warn("No alerts in queue to acknowledge");
+        return;
+    }
 
+    const { temp, alertId, type } = violationQueue[0];
     const name = document.getElementById('name').value;
     const comment = this.comment.value;
     
@@ -1290,28 +1622,48 @@ document.getElementById('alertForm').addEventListener('submit', async function (
         timestamp_acknowledged: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
     };
 
-    const response = await fetch('/logalert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    try {
+        const response = await fetch('/logalert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    if (response.ok) {
-        this.reset();
-        document.getElementById('alertmodal').style.display = 'none';
-        if (type === 'temp') lastAlertTimetemp = Date.now();
-        else if (type === 'acciia') lastAlertTimeiia = Date.now();
-        else if (type === 'tempiia') lastAlertTimeiiatemp = Date.now();
-        else if (type === 'humidiia') lastAlertTimeiiahumid = Date.now();
-        else if (type === 'volt') lastAlertTimevolt = Date.now();
-        else if (type === 'current') lastAlertTimecurrent = Date.now();
-        else if (type === 'sen1') lastAlertTimesen1 = Date.now();
-        else if (type === 'sen2') lastAlertTimesen2 = Date.now();
-        else if (type === 'sen3') lastAlertTimesen3 = Date.now();
-        else if (type === 'ethernet') lastAlertTimeethernet = Date.now();
-        violationQueue.shift();
-        setTimeout(showNextViolation, 300);
-    } else {
+        if (response.ok) {
+            // Reset form and hide modal
+            this.reset();
+            document.getElementById('alertmodal').style.display = 'none';
+            
+            // Update last alert times based on type
+            const now = Date.now();
+            switch(type) {
+                case 'temp': lastAlertTimetemp = now; break;
+                case 'acciia': lastAlertTimeiia = now; break;
+                case 'tempiia': lastAlertTimeiiatemp = now; break;
+                case 'humidiia': lastAlertTimeiiahumid = now; break;
+                case 'volt': lastAlertTimevolt = now; break;
+                case 'current': lastAlertTimecurrent = now; break;
+                case 'sen1': lastAlertTimesen1 = now; break;
+                case 'sen2': lastAlertTimesen2 = now; break;
+                case 'sen3': lastAlertTimesen3 = now; break;
+                case 'ethernet': lastAlertTimeethernet = now; break;
+                case 'connectionlostlkshr': lastalertlkshrconnec = now; break;
+                case 'connectionlostiia': lastalertiiaconnec = now; break;
+                case 'connectionlostpwr': lastalertpowerconec = now; break;
+            }
+            
+            // Remove from active alerts and queue
+            activeAlerts.delete(type);
+            violationQueue.shift();
+            isAlertOpen = false;
+            
+            // Show next alert after a brief delay
+            setTimeout(showNextViolation, 300);
+        } else {
+            alert("Error: Could not acknowledge alert.");
+        }
+    } catch (error) {
+        console.error("Error acknowledging alert:", error);
         alert("Error: Could not acknowledge alert.");
     }
 });
@@ -1323,28 +1675,34 @@ document.getElementById('alertForm').addEventListener('submit', async function (
         plotAccX();
         plotAccY();
         plotAccZ();
-	
-        // Update the voltage and current values every second
-        setInterval(updateVoltageCurrent, 2000);
+
+        configready.then(() => {
+        alertstatus = configVars.statusalert;
+        // Update the voltage and current values every 2 seconds
+        setInterval(updateVoltageCurrent, configVars.powerFuncInterval);
         // Other intervals remain the same
-        setInterval(updateTemperatures, 2000); // Update every 2 seconds
-        setInterval(updateLakeshoreTemperatures, 1000); // Update every 1 second
+        setInterval(updateTemperatures, configVars.lakeFuncInterval); // Update every 2 seconds
+        setInterval(updateLakeshoreTemperatures, configVars.lakePlotInterval); // Update every 1 second
         initPlot();
-        setInterval(fetchCurrentTemperature, 8000); // Update temperature every 8 seconds
+        setInterval(fetchCurrentTemperature, configVars.cryoFuncInterval); // Update temperature every 8 seconds -
         
         // Initial plot setup
         // Update every second
         //setInterval(updateVoltageCurrent, 2000);
-        setInterval(fetchAccelerationData, 4000); // Fetch data every 1000ms (1 second)
+        setInterval(fetchAccelerationData, configVars.iiaFuncInterval); // Fetch data every 4000ms (4 second) - 
 
         // Then every 10 seconds (10000 milliseconds)
-        setInterval(checkEthernetStatus, 10000);
+        setInterval(checkEthernetStatus, configVars.ethernetStatusInterval);//
 
-	//Sending data every 5 seconds
+        // Check connection status every 3 seconds
+        setInterval(checkConnectionAlerts, configVars.alertconnection);
+
+	//Sending data every 9 seconds
 	setInterval(async () => {
 		    await sendBufferedDatatoBackend();
-		    },9000);
-
+		    },configVars.dataToBackendInterval);//
+        
+        });
     
     </script>
 </body>

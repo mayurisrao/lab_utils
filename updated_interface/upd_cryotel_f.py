@@ -14,10 +14,19 @@ import tkinter as tk
 from tkinter import simpledialog
 import logging
 import subprocess
+import yaml
 
-def connect_serial_with_retry(path, message, baudrate=9600, bytesize=serial.EIGHTBITS,
+
+
+
+logging.basicConfig(level=logging.INFO)
+connection_alerts = []
+#cryo_usb, lakeshore_usb, power_usb, iia_usb = get_usb_paths()
+def connect_serial_with_retry1(path, message, retry_timeout=3, baudrate=9600, bytesize=serial.EIGHTBITS,
                               parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=1):
-    while True:
+    #Attempt to connect to the serial device within the given retry timeout.
+    start_time = time.time()
+    while time.time() - start_time < retry_timeout:
         try:
             ser = serial.Serial(
                 port=path,
@@ -27,23 +36,45 @@ def connect_serial_with_retry(path, message, baudrate=9600, bytesize=serial.EIGH
                 stopbits=stopbits,
                 timeout=timeout
             )
-            print(f"\n \nConnected to {message}")
+            print(f"Connected to {message}")
+            connection_alerts.append({
+            'type': 'connectionfound',
+            'device': message,
+            'timestamp': datetime.now().isoformat()
+            })
             return ser
         except serial.SerialException:
             print(f"Waiting for device to reconnect at {message}...")
-            time.sleep(2)
-# Get user inputs
-#cryo_usb, lakeshore_usb, power_usb, iia_usb = get_usb_paths()
-
-#USB paths
-cryo_usb="/dev/serial/by-path/pci-0000:00:14.0-usb-0:11.4:1.0-port0"
-lakeshore_usb="/dev/serial/by-path/pci-0000:00:14.0-usb-0:11.4:1.0-port1"
-power_usb="/dev/serial/by-path/pci-0000:00:14.0-usb-0:11.2:1.0-port0"
-iia_usb="/dev/serial/by-path/pci-0000:00:14.0-usb-0:11.1:1.0-port0"
-
+            connection_alerts.append({
+            'type': 'connectionlost',
+            'device': message,
+            'timestamp': datetime.now().isoformat()
+            })
+            time.sleep(1)
+    print(f"Retry timeout exceeded for {message}")
+    return None
+#Access data from config.yml file
+with open("config.yml", 'r') as file:
+    config = yaml.safe_load(file)
 
 app = Flask(__name__)
 
+@app.route('/get_config', methods=['GET'])
+def get_config():
+    return jsonify(config)
+
+#USB paths
+cryo_usb=config['Cryo_temp']['cryo_usbpath']
+lakeshore_usb=config['lakeshore_temp']['lakeshore_usbpath']
+power_usb=config['power_supply']['power_usbpath']
+iia_usb=config['iia_logger']['iia_usbpath']
+
+
+#app = Flask(__name__)
+
+
+
+voltage_limit = config['Cryo_temp']['cryo_usbpath']
 
 
 #===========================================================================================
@@ -76,10 +107,11 @@ def initialize_serial_connection():
         ser_connection_fail = True
 
 def send_command(command):
-    global ser_connection_fail
-    if ser_connection_fail:
-        return 'NA'
-    else:
+    global ser
+    try:
+        if not ser:
+            return None
+
         ser.write(command.encode('utf-8'))
 
         response = ''
@@ -88,33 +120,34 @@ def send_command(command):
             if line == '':
                 break
             response += line + '\n'
-        return str(response.split('\n')[1])
 
-def send_command_lakeshore(command):
-    global ser_connection_fail
-    if ser_connection_fail:
-        return 'NA'
-    else:
-        ser.write(command.encode('utf-8'))
+        lines = response.split('\n')
+        return lines[1] if len(lines) > 1 else 'NA'
 
-        response = ''
-        while True:
-            line = ser.readline().decode('utf-8').strip()
-            if line == '':
-                break
-            response += line + '\n'
-        return str(response.split('\n')[1])
-    
-# Function to get current temperature
+    except serial.SerialException:
+        print("SerialException in cryo. Reconnecting...")
+        try:
+            ser.close()
+        except:
+            pass
+        ser = None
+        return None
+        
+connect_serial_with_retry1(cryo_usb,'cryo usb')
+
 def get_current_temperature():
-    if not ser_connection_fail:
-        command = "TC\r"
-        temperature = send_command(command)
-        # Log the temperature with timestamp
-        timestamp = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-        temperature_logs.append({'timestamp': timestamp, 'temperature': temperature})
-        return temperature
-    return "Error"
+    global ser
+    if not ser:
+        ser = connect_serial_with_retry1(cryo_usb, "Cryogenic System", retry_timeout=3)
+        if not ser:
+            return None
+
+    temp = send_command("TC\r")
+    timestamp = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
+    temperature_logs.append({'timestamp': timestamp, 'temperature': temp})
+    return temp
+
+
 # Function to turn on cooler
 def cooler_on_command():
     # Send "COOLER=ON" command to the controller
@@ -203,19 +236,34 @@ def save_log():
       
     return jsonify({"message":"Data appended successfully to three files"}),200
 
+# Start the background thread
+def start_logging_in_background(interval, log_data, filename):
+    logging_thread = threading.Thread(target=save_log, args=())
+    logging_thread.daemon = True
+    logging_thread.start()
+
 #=========================================================================================
 # Functions merging frontend to this cryo controller flask app
 @app.route('/')
 def index():
-    return render_template('index1.html')
+    return render_template('upd_index1.html')
 
 # Assuming other imports and Flask setup are already done
 temperature_dump = []
 @app.route('/get_temperature', methods=['GET'])
 def get_temperature():
-    current_temp = get_current_temperature()  # Function to get current temperature
-    temperature_dump.append(current_temp)  # Add to temperature dump
-    return jsonify({'current_temp': current_temp})
+    global ser
+    if not ser:
+        ser = connect_serial_with_retry1(cryo_usb, "Cryogenic System", retry_timeout=3)
+        if not ser:
+            return jsonify({"error": "Cryo USB not connected"}), 503
+
+    temp = get_current_temperature()
+    if temp is None:
+        return jsonify({"error": "Failed to read temperature"}), 500
+
+    temperature_dump.append(temp)
+    return jsonify({'current_temp': temp})
 
 @app.route('/log_temperature', methods=['POST'])
 def log_temperature():
@@ -256,7 +304,6 @@ def set_kp_ki_kd():
     return jsonify(message='Invalid Kp, Ki, Kd values', success=False), 400
 
 
-
 @app.route('/cooler_on', methods=['POST'])
 def cooler_on():
     cooler_on_command()
@@ -275,80 +322,115 @@ ser_lakeshore = None # to hold the lakeshore serial connection
 
 #===========================================================================================
 # Initialize serial connection with lakeshore temp display
-def initialize_serial_lakeshore(port, baudrate):
-    try:
-        return serial.Serial(
-            port=port,
-            baudrate=baudrate,
-            bytesize=serial.SEVENBITS,
-            parity=serial.PARITY_ODD,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=1
-        )
-    except Exception as e:
-        print(f"Error initializing serial: {e}")
-        return None
+def connect_serial_lakeshore(path, message, retry_timeout=3, baudrate=9600,
+                              bytesize=serial.SEVENBITS, parity=serial.PARITY_ODD,
+                              stopbits=serial.STOPBITS_ONE, timeout=1):
+    start_time = time.time()
+    while time.time() - start_time < retry_timeout:
+        try:
+            ser = serial.Serial(
+                port=path,
+                baudrate=baudrate,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                timeout=timeout
+            )
+            print(f"Connected to {message}")
+            connection_alerts.append({
+            'type': 'connectionfound',
+            'device': message,
+            'timestamp': datetime.now().isoformat()
+            })
+            return ser
+        except serial.SerialException:
+            print(f"Waiting to reconnect {message}...")
+            connection_alerts.append({
+            'type': 'connectionlost',
+            'device': message,
+            'timestamp': datetime.now().isoformat()
+            })
+            time.sleep(1)
+    print(f"Retry timeout exceeded for {message}")
+    return None
 
 
-# Setup serial connection
-def setup_serial_lakeshore():
-    global ser_lakeshore
-    port = lakeshore_usb  # Replace this with actual port input
-    baudrate = 9600  # Replace this with actual baudrate input
-    ser_lakeshore = initialize_serial_lakeshore(port, baudrate)
-    return ser_lakeshore
-
-
-# Read response with a timeout
-def read_response_lakeshore(timeout_period, terminator):
+# Response Reader
+def read_response_lakeshore(timeout_period=1, terminator='\r\n'):
     global ser_lakeshore
     start_time = time.time()
     response = ""
-    while (time.time() - start_time) < timeout_period:
-        if ser_lakeshore.in_waiting > 0:
-            data = ser_lakeshore.read(ser_lakeshore.in_waiting).decode()
-            response += data
-            if terminator in response:
-                response = response.split(terminator, 1)[0]
-                return response
+
+    while time.time() - start_time < timeout_period:
+        try:
+            if ser_lakeshore and ser_lakeshore.in_waiting > 0:
+                data = ser_lakeshore.read(ser_lakeshore.in_waiting).decode(errors='ignore')
+                response += data
+                if terminator in response:
+                    return response.split(terminator, 1)[0]
+        except serial.SerialException as e:
+            print(f"Serial error while reading: {e}")
+            try:
+                ser_lakeshore.close()
+            except:
+                pass
+            ser_lakeshore = None
+            return None
+        except Exception as e:
+            print(f"Unexpected read error: {e}")
+            return None
+    return None
 
 
+# --- Read Temperature Data ---
 def temp_update_lakeshore():
     global ser_lakeshore
-    if ser_lakeshore is None:
+    if not ser_lakeshore:
         return None
-    try: 
-        read_timeout = 1
+
+    try:
         ser_lakeshore.write('KRDG?\r\n'.encode())
-        response = read_response_lakeshore(read_timeout, '\r\n')
+        response = read_response_lakeshore()
+
+        if response is None:
+            return None
+
         try:
             temperatures = [float(val) for val in response.split(',')]
             return temperatures
-
         except Exception as e:
-            print(f"Error initializing serial: {e}")
+            print(f"Parsing error: {e} | Raw response: {response}")
             return None
-          
- 
+
     except serial.SerialException:
-        print("Lost connection of Lakeshore. Reconnecting...")
-        #lakeshore_usb.close()
-        log_connection_status("Lakeshore connection is lost")
-        connect_serial_with_retry(lakeshore_usb,"lakeshore_usb")
-    
+        print("Lost connection to Lakeshore. Marking ser_lakeshore = None")
+        try:
+            ser_lakeshore.close()
+        except:
+            pass
+        ser_lakeshore = None
+        return None
+
 lakeshore_temperatures = []
 
+# --- Flask Routes ---
 @app.route('/get_temperature_data_lakeshore')
 def get_temperature_data_lakeshore():
+    global ser_lakeshore
+    if not ser_lakeshore:
+        ser_lakeshore = connect_serial_lakeshore(lakeshore_usb, "Lakeshore System", retry_timeout=3)
+        if not ser_lakeshore:
+            return jsonify({'status': 'error', 'message': 'Lakeshore USB not connected'}), 503
+
     temps = temp_update_lakeshore()
     if temps is None:
-        return jsonify({'status': 'error', 'message': 'Serial communication failed'}), 500
-    
-    global lakeshore_temperatures
-    lakeshore_temperatures.append(temps)  # Store the current readings
+        return jsonify({'status': 'error', 'message': 'Temperature read failed'}), 500
 
-    temp_data = {'temperatures': temps}
-    return jsonify(temp_data)
+    global lakeshore_temperatures
+    lakeshore_temperatures.append(temps)
+
+    return jsonify({'temperatures': temps})
+
 
 @app.route('/plot_temperatures')
 def plot_temperatures():
@@ -357,7 +439,6 @@ def plot_temperatures():
         return jsonify({'status': 'error', 'message': 'No temperature data available'}), 500
 
     fig = go.Figure()
-
     for i in range(len(lakeshore_temperatures[0])):
         fig.add_trace(go.Scatter(
             x=list(range(len(lakeshore_temperatures))),
@@ -366,14 +447,15 @@ def plot_temperatures():
             name=f'Sensor {i + 1}'
         ))
 
-    fig.update_layout(title='Lakeshore Temperature Sensors',
-                      xaxis_title='Time (Sample Index)',
-                      yaxis_title='Temperature (K)',
-                      legend_title='Sensors')
-    
-    plot_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-    return render_template('index1.html', plot_json=plot_json)
+    fig.update_layout(
+        title='Lakeshore Temperature Sensors',
+        xaxis_title='Time (Sample Index)',
+        yaxis_title='Temperature (K)',
+        legend_title='Sensors'
+    )
 
+    plot_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('upd_index1.html', plot_json=plot_json)
 
 #===========================================================================================
 # Power Supply Variables
@@ -385,112 +467,167 @@ ser_power = None
 terminator_power = '\r\n'
 read_timeout_power = 2
 
-
-def read_response_power(serial_port, timeout_period, terminator_power):
+def read_response_power(serial_port, timeout_period, terminator):
+    global ser_power
     start_time = time.time()
     response = ""
-   
-    while (time.time() - start_time) < timeout_period:
-        if serial_port.in_waiting > 0:
-            data = serial_port.read(serial_port.in_waiting).decode()
-            
-            response += data
-            
-            if terminator_power in response:
-                response = response.split(terminator_power, 1)[0].strip()
-                
-                # Check for the specific response
-                if response == 'CH 1 ON':
-                    return '..'  # Send '..' instead of 'CH 1 ON'
-                return response  # Return the response if it's not 'CH 1 ON'
 
+    while time.time() - start_time < timeout_period:
+        try:
+            if serial_port.in_waiting > 0:
+                data = serial_port.read(serial_port.in_waiting).decode(errors='ignore')
+                response += data
+                if terminator in response:
+                    response = response.split(terminator, 1)[0].strip()
+                    return '..' if response == 'CH 1 ON' else response
+        except serial.SerialException:
+            print("Serial exception in read_response_power. Marking ser_power = None")
+            try:
+                ser_power.close()
+            except:
+                pass
+            ser_power = None
+            return None
     return None
 
+
+# --- Command Helpers ---
 def remote_on_power():
-    cmd = 'CH 1' + terminator_power
-    ser_power.write(cmd.encode())
+    global ser_power
+    if not ser_power:
+        return
+    try:
+        cmd = 'CH 1' + terminator_power
+        ser_power.write(cmd.encode())
+    except serial.SerialException:
+        print("Lost connection in remote_on_power. Marking ser_power = None")
+        try:
+            ser_power.close()
+        except:
+            pass
+        ser_power = None
+
 
 def remote_off_power():
-    cmd = 'exit' + terminator_power
-    ser_power.write(cmd.encode())
+    global ser_power
+    if not ser_power:
+        return
+    try:
+        cmd = 'exit' + terminator_power
+        ser_power.write(cmd.encode())
+    except serial.SerialException:
+        print("Lost connection in remote_off_power. Marking ser_power = None")
+        try:
+            ser_power.close()
+        except:
+            pass
+        ser_power = None
+
 
 def get_voltage_current_power():
     global ser_power
-    if ser_power:
-        cmd = 'SO:VO?' + terminator_power
-        ser_power.write(cmd.encode())
+    if not ser_power:
+        return None, None
+    try:
+        ser_power.write(('SO:VO?' + terminator_power).encode())
         voltage = read_response_power(ser_power, read_timeout_power, terminator_power)
 
-        cmd = 'SO:CU?' + terminator_power
-        ser_power.write(cmd.encode())
+        ser_power.write(('SO:CU?' + terminator_power).encode())
         current = read_response_power(ser_power, read_timeout_power, terminator_power)
 
         return voltage, current
-    else:
-        print('ser_power serial connection is None')
+    except serial.SerialException:
+        print("Lost connection in get_voltage_current_power. Marking ser_power = None")
+        try:
+            ser_power.close()
+        except:
+            pass
+        ser_power = None
         return None, None
 
-def set_voltage_current_power(voltage, current, ser_power):
-    
-    if ser_power is None:
-        print('ser_power serial connection is None in set_voltage_current_power()')
-        return jsonify(success=False, message="Serial connection not initialized"), 500
 
-    if voltage:
-        cmd = f'SO:VO {voltage}' + terminator_power
-        ser_power.write(cmd.encode())
+def get_output_voltage_current_power():
+    global ser_power
+    if not ser_power:
+        return None, None
+    try:
+        ser_power.write(('VOLT?' + terminator_power).encode())
+        out_voltage = read_response_power(ser_power, read_timeout_power, terminator_power)
         time.sleep(0.1)
 
-    if current:
-        cmd = f'SO:CU {current}' + terminator_power
-        ser_power.write(cmd.encode())
+        ser_power.write(('CURR?' + terminator_power).encode())
+        out_current = read_response_power(ser_power, read_timeout_power, terminator_power)
+
+        return out_voltage, out_current
+    except serial.SerialException:
+        print("Lost connection in get_output_voltage_current_power. Marking ser_power = None")
+        try:
+            ser_power.close()
+        except:
+            pass
+        ser_power = None
+        return None, None
+
+
+def set_voltage_current_power(voltage, current, ser_power_local):
+    global ser_power
+    if ser_power_local is None:
+        return jsonify(success=False, message="Serial connection not initialized"), 503
+
+    try:
+        if voltage:
+            cmd = f'SO:VO {voltage}' + terminator_power
+            ser_power_local.write(cmd.encode())
+            time.sleep(0.1)
+
+        if current:
+            cmd = f'SO:CU {current}' + terminator_power
+            ser_power_local.write(cmd.encode())
+    except serial.SerialException:
+        print("Lost connection in set_voltage_current_power. Marking ser_power = None")
+        try:
+            ser_power.close()
+        except:
+            pass
+        ser_power = None
 
     return jsonify(success=True, message="Values updated successfully")
 
 
-def get_output_voltage_current_power():    
-    cmd = 'VOLT?'
-    cmd += terminator_power    
-    if ser_power:
-        ser_power.write(cmd.encode())
-        out_voltage = read_response_power(ser_power, read_timeout_power, terminator_power)
-        time.sleep(0.1)
-    
-        cmd = 'CURR?'
-        cmd += terminator_power
-        ser_power.write(cmd.encode())    
-        out_current = read_response_power(ser_power, read_timeout_power, terminator_power)
-        
-        return out_voltage, out_current
-    elif ser_power == None:
-        print('ser_power serial connection is None')
-
-
+# --- Flask Routes ---
 @app.route('/set_power_supply', methods=['POST'])
 def set_power_supply():
     global ser_power
+
+    if ser_power is None:
+        ser_power = connect_serial_with_retry1(power_usb, "Power System", retry_timeout=3)
+        if ser_power is None:
+            return jsonify({"error": "Power USB not connected"}), 503
+
     voltage = request.json.get('voltage')
     current = request.json.get('current')
 
-    # Set voltage and current if they are provided
-    if voltage is not None:
-        set_voltage_current_power(voltage, current, ser_power)
-    
-    if current is not None:
-        set_voltage_current_power(voltage, current, ser_power)
-
-    return jsonify(success=True, message='Voltage and/or current set'), 200
-
+    return set_voltage_current_power(voltage, current, ser_power)
 
 
 @app.route('/get_outvoltagecurrent', methods=['GET'])
 def get_outvoltagecurrent():
-    request.start_time = time.time()
     global ser_power
-    outvoltage, outcurrent = get_output_voltage_current_power()
+
+    if ser_power is None:
+        ser_power = connect_serial_with_retry1(power_usb, "Power System", retry_timeout=3)
+        if ser_power is None:
+            return jsonify({"error": "Power USB not connected"}), 503
+
+    out_voltage, out_current = get_output_voltage_current_power()
     voltage, current = get_voltage_current_power()
-    
-    return jsonify(voltage=voltage, current=current, outvoltage=outvoltage, outcurrent=outcurrent)
+
+    return jsonify(
+        voltage=voltage,
+        current=current,
+        outvoltage=out_voltage,
+        outcurrent=out_current
+    )
 
 
 
@@ -502,67 +639,70 @@ datalog_iia = {'time': [], 'accx': [], 'accy': [], 'accz': [], 'temperature': []
 
 # Function to read sensor data
 def read_sensor_data_iia():
-    while True:
+    global ser_iia
+
+    try:
+        line = ser_iia.readline().decode('utf-8').rstrip()
+        line = line.split(' ')
+
+        if len(line) < 18:
+            return None  # Not enough data
+
+        datalog_iia['time'].append(datetime.now())
+        datalog_iia['accx'].append(float(line[13]))
+        datalog_iia['accy'].append(float(line[15]))
+        datalog_iia['accz'].append(float(line[17]))
+        datalog_iia['temperature'].append(float(line[7]))
+        datalog_iia['humidity'].append(float(line[4]))
+
+        return {
+            'time': datetime.now().isoformat(),
+            'temperature': datalog_iia['temperature'],
+            'humidity': datalog_iia['humidity'],
+            'accx': datalog_iia['accx'],
+            'accy': datalog_iia['accy'],
+            'accz': datalog_iia['accz']
+        }
+
+    except serial.SerialException:
+        print("Lost connection to IIA. Marking serial as None.")
         try:
-            line = ser_iia.readline().decode('utf-8').rstrip()
-	
-            try:
-                line = line.split(' ')
-                if len(line) < 18:
-                    continue
-                # Append data to the datalog
-                datalog_iia['time'].append(datetime.now())
-                datalog_iia['accx'].append(float(line[13]))
-                datalog_iia['accy'].append(float(line[15]))
-                datalog_iia['accz'].append(float(line[17]))
-                datalog_iia['temperature'].append(float(line[7]))  # Ensure this is float
-                datalog_iia['humidity'].append(float(line[4]))     # Ensure this is float
-
-                # Create a structured JSON object to return
-                #print("\n\nIIA log data\n",datalog_iia,"\n\n")
-                return {
-                    'time': datetime.now().isoformat(),
-                    'temperature': datalog_iia['temperature'],
-                    'humidity': datalog_iia['humidity'],
-                    'accx': datalog_iia['accx'],
-                    'accy': datalog_iia['accy'],
-                    'accz': datalog_iia['accz']
-                }
-            except Exception as e:
-                print(f"Error reading sensor data: {e}")
-        except serial.SerialException:
-            print("Lost connection of IIA. Reconnecting...")
-            log_connection_status("IIA connection is lost")
-            #iia_usb.close()
-            connect_serial_with_retry(iia_usb,"iia_usb")
+            ser_iia.close()
+        except:
+            pass
+        ser_iia = None
+        return None
+    except Exception as e:
+        print(f"Error reading sensor data: {e}")
+        return None
 
 
-# Flask route to get sensor data
 @app.route('/get_data_iia', methods=['GET'])
 def get_data_iia():
-    try:
-        request.start_time = time.time()
-        temp = read_sensor_data_iia()
-        
-        return jsonify(temp)
+    global ser_iia
 
-    except Exception as e:
-        print(f"Error in get_data_iia: {e}")
-        return jsonify({"error":"Internal Server Error"}),500
-   
+    if ser_iia is None:
+        ser_iia = connect_serial_with_retry1(iia_usb, "IIA System", retry_timeout=3)
+        if ser_iia is None:
+            return jsonify({"error": "IIA USB not connected"}), 503
 
-# Initialize the serial connection
+    data = read_sensor_data_iia()
+    if data is None:
+        return jsonify({"error": "Failed to read data"}), 500
+
+    return jsonify(data)
+
+
+# Initial attempt to connect (non-blocking startup)
 try:
-    ser_iia = serial.Serial(iia_usb, 9600, timeout=2)
-
+    ser_iia = connect_serial_with_retry1(iia_usb, "IIA System", retry_timeout=3)
 except Exception as e:
-    print(f"Error opening serial port: {e}")
-    exit()
+    print(f"Initial connection failed: {e}")
+    ser_iia = None
 
 
 # Initialize the serial connection when the app starts
-ser_lakeshore = setup_serial_lakeshore()
-
+ser_lakeshore = connect_serial_lakeshore(lakeshore_usb, "Lakeshore System", retry_timeout=3)
 
 try:
     ser_power = serial.Serial(port=power_usb, baudrate=9600, timeout=read_timeout_power)
@@ -640,6 +780,14 @@ def ethernet_status():
         return jsonify({'ethernet_connected': False})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/get_connection_alerts')
+def get_connection_alerts():
+    global connection_alerts
+    # Send and clear the queue
+    alerts_to_send = connection_alerts[:]
+    connection_alerts.clear()
+    return jsonify(alerts_to_send)
 
     
 app.run(debug=False, host='172.16.101.85', port=5002)
